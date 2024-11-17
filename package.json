@@ -1,0 +1,143 @@
+{
+  "name": "udon",
+  "displayName": "Udon🍜",
+  "description": "Udon: A simple extension to paste images effortlessly.",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nodamushi/Udon"
+  },
+  "license": "(MIT OR UNLICENSE)",
+  "engines": {
+    "vscode": "^1.94.0"
+  },
+  "extensionKind": [
+    "ui",
+    "workspace"
+  ],
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "udon.pasteImage",
+        "title": "Paste Clipboard Image",
+        "category": "Udon🍜"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "udon.pasteImage",
+        "key": "ctrl+alt+v",
+        "when": "editorTextFocus"
+      }
+    ],
+    "configuration": {
+      "properties": {
+        "udon.format": {
+          "type": "string",
+          "enum": [
+            "jpeg",
+            "png",
+            "webp",
+            "bmp",
+            "gif",
+            "avif"
+          ],
+          "default": "webp",
+          "description": "The default paste image format."
+        },
+        "udon.saveInWorkspaceOnly": {
+          "type": "boolean",
+          "default": true,
+          "description": "Restrict file saving to within the workspace."
+        },
+        "udon.execPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "[`climg2base64`](https://github.com/nodamushi/climg2base64) exec path.<br> Install command: `cargo install --git https://github.com/nodamushi/climg2base64` "
+        },
+        "udon.baseDirectory": {
+          "type": "string",
+          "default": "${fileDirname}/image",
+          "description": "Base directory for saving images."
+        },
+        "udon.defaultFileName": {
+          "type": "string",
+          "default": "${fileBasenameNoExtension}-${date:YYYY-M-D}",
+          "description": "Default name for saving images (* without extension)."
+        },
+        "udon.rule": {
+          "type": "array",
+          "description": "Insert text rule. [[pattern, replace text]]",
+          "default": [
+            [
+              "*.md",
+              "![](${relImage:${fileDirname}})"
+            ],
+            [
+              "*.textile",
+              "!${relImage:${fileDirname}}!"
+            ],
+            [
+              "*.adoc",
+              "image::${relImage:${fileDirname}}[]"
+            ],
+            [
+              "*.html",
+              "<img src=\"${relImage:${fileDirname}}\">"
+            ],
+            [
+              "*.cpp",
+              "@image html ${relImage:${workspaceFolder}}"
+            ],
+            [
+              "*.hpp",
+              "@image html ${relImage:${workspaceFolder}}"
+            ],
+            [
+              "*",
+              "${relImage:${workspaceFolder}}"
+            ]
+          ]
+        },
+        "udon.suffixLength": {
+          "type": "integer",
+          "description": "Zero-padded length of the numeric suffix for the duplicate output image file.",
+          "default": 0
+        },
+        "udon.suffixDelimiter": {
+          "type": "string",
+          "default": "_",
+          "description": "The delimiter used between the name and the numeric suffix when naming duplicate files."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.1",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.94.0",
+    "@typescript-eslint/eslint-plugin": "^6.4.1",
+    "@typescript-eslint/parser": "^6.4.1",
+    "@vscode/test-electron": "^2.3.4",
+    "eslint": "^8.47.0",
+    "glob": "^10.3.3",
+    "mocha": "^10.2.0",
+    "typescript": "^5.1.6"
+  },
+  "dependencies": {
+    "vscode-uri": "^3.0.8"
+  }
+}
