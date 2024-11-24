@@ -89,6 +89,113 @@ suite('exp Test Suite', function () {
     }
   });
 
+  test("testRulePattern", () => {
+    {
+      const p = "*.txt";
+      let x = t.patternToRegex(p);
+      for (const v of [
+        ".txt",
+        "hoge.txt",
+        "foo/bar/bar.txt",
+        "foo/piyo/.txt",
+        "foo/piyo/taro.txt",
+      ]) {
+        assert.equal(t.testRulePattern(x, vscode.Uri.file(v)), true, `Pattern: ${p} != ${v}`);
+      }
+    }
+
+    {
+      const p = "*.txt";
+      let x = t.patternToRegex(p);
+      for (const v of [
+        "",
+        "hoge.txt.piyo",
+        "foo/bar.txt/piyo",
+      ]) {
+        assert.equal(t.testRulePattern(x, vscode.Uri.file(v)), false, `Pattern: ${p} == ${v}`);
+      }
+    }
+    {
+      const p = "foo/*/*.txt";
+      let x = t.patternToRegex(p);
+      for (const v of [
+        "foo/bar/bar.txt",
+        "foo/piyo/.txt",
+        "foo/piyo/taro.txt",
+        "taro/foo/piyo/taro.txt",
+        "ziro/taro/foo/piyo/taro.txt",
+      ]) {
+        assert.equal(t.testRulePattern(x, vscode.Uri.file(v)), true, `Pattern: ${p} != ${v}`);
+      }
+    }
+    {
+      const p = "foo/*/*.txt";
+      let x = t.patternToRegex(p);
+      for (const v of [
+        "",
+        "foo/bar/baz/bar.txt",
+        "foo/bar/bar.txt/bar.txt",
+        "barfoo/piyo/taro.txt",
+      ]) {
+        assert.equal(t.testRulePattern(x, vscode.Uri.file(v)), false, `Pattern: ${p} != ${v}`);
+      }
+    }
+    {
+      const p = "foo/**/*.txt";
+      let x = t.patternToRegex(p);
+      for (const v of [
+        "foo/bar.txt",
+        "foo/bar/bar.txt",
+        "foo/bar/piyo/.txt",
+        "foo/bar/piyo/piyo/taro.txt",
+        "taro/foo/piyo/taro.txt",
+        "ziro/taro/foo/piyo/taro.txt",
+      ]) {
+        assert.equal(t.testRulePattern(x, vscode.Uri.file(v)), true, `Pattern: ${p} != ${v}`);
+      }
+    }
+    {
+      const p = "foo/**/*.txt";
+      let x = t.patternToRegex(p);
+      for (const v of [
+        "",
+        "foobar/bar.txt",
+        "barfoo/piyo/taro.txt",
+      ]) {
+        assert.equal(t.testRulePattern(x, vscode.Uri.file(v)), false, `Pattern: ${p} != ${v}`);
+      }
+    }
+    {
+      const p = "**/*.txt";
+      let x = t.patternToRegex(p);
+      for (const v of [
+        "foo/bar.txt",
+        "foo/bar/bar.txt",
+        "foo/bar/piyo/.txt",
+        "foo/bar/piyo/piyo/taro.txt",
+        "taro/foo/piyo/taro.txt",
+        "ziro/taro/foo/piyo/taro.txt",
+      ]) {
+        assert.equal(t.testRulePattern(x, vscode.Uri.file(v)), true, `Pattern: ${p} != ${v}`);
+      }
+    }
+    {
+      const p = "*";
+      let x = t.patternToRegex(p);
+      for (const v of [
+        "",
+        "foo/bar.txt",
+        "foo/bar/bar.txt",
+        "foo/bar/piyo/.txt",
+        "foo/bar/piyo/piyo/taro.txt",
+        "taro/foo/piyo/taro.txt",
+        "ziro/taro/foo/piyo/taro.txt",
+      ]) {
+        assert.equal(t.testRulePattern(x, vscode.Uri.file(v)), true, `Pattern: ${p} != ${v}`);
+      }
+    }
+  });
+
   test("getSaveImagePath", async () => {
     let x = await t.getSaveImagePath({
       format: "webp",

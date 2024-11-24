@@ -1,7 +1,7 @@
 import * as os from 'os';
 import * as vscode from 'vscode';
 import * as vsuri from 'vscode-uri';
-import { basenameOfUri, EvalEnv, EvalNode, evalPath, evalString, parseExpression, Uri } from './eval';
+import { basenameOfUri, EvalEnv, EvalNode, evalPath, evalString, parentOfUri, parseExpression, Uri } from './eval';
 import path = require('path');
 import { getClipboardAsImageBase64, getVersion, Result } from './climg2base64';
 import * as https from 'https';
@@ -128,14 +128,22 @@ interface Rule {
 }
 
 function patternToRegex(pattern: string) {
-  if (!/^[\w\*\.\-]+$/.test(pattern)) {
-    throw new Error("Invalid pattern:" + pattern + ": Only alphanumeric, '*', '.', and '-' are allowed.");
+  if (pattern === "*" || pattern === "**") {
+    return /.*/;
+  }
+  if (!/^[\w\*\.\-/]+$/.test(pattern)) {
+    throw new Error("Invalid pattern:" + pattern + ": Only alphanumeric, '*', '**', '.', '/', and '-' are allowed.");
   }
 
-  return new RegExp("^" + pattern
+  let p = pattern
     .replace(/\./g, "\\.")
-    .replace(/\*/g, ".*")
-    + "$");
+    .replace(/^\*\*\//, "") // remove top **/
+    .replace(/\/\*\*\//g, "<<{<;aster2;>}>>") // /**/
+    .replace(/\*/g, "<<{<;aster1;>}>>")   // *
+    .replace(/<<{<;aster2;>}>>/g, "/.*")
+    .replace(/<<{<;aster1;>}>>/g, "[^/\\\\]*");
+
+  return new RegExp("^" + p + "$");
 }
 
 
@@ -361,10 +369,26 @@ export class Udon implements Logger {
 }
 
 
+function testRulePattern(pattern: RegExp, uri: vscode.Uri) {
+  let current = basenameOfUri(uri);
+  let dir = parentOfUri(uri);
+  while(true) {
+    if (pattern.test(current)) {
+      return true;
+    }
+    let x = basenameOfUri(dir);
+    let nextdir = parentOfUri(dir);
+    if (!x || dir.path === nextdir.path) {
+      return false;
+    }
+    current = x + "/" + current;
+    dir = nextdir;
+  }
+}
+
 function getRule(rules: Rule[], uri: vscode.Uri) {
-  const name = basenameOfUri(uri);
   for (const r of rules) {
-    if (r.pattern.test(name)) {
+    if (testRulePattern(r.pattern, uri)) {
       return r.evalNode;
     }
   }
@@ -792,5 +816,6 @@ export const __test__ = {
   get_download_url,
   patternToRegex,
   download,
+  testRulePattern,
   PRE_BUILD,
 };
