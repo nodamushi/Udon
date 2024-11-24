@@ -44,24 +44,6 @@
 cargo install --git https://github.com/nodamushi/climg2base64
 ```
 
-
-## インストール方法
-
-> [!IMPORTANT]
-> 😢だれかマルチプラットフォーム ビルドをする方法をこのRust弱者に教えてください。。。
-
-クリップボードから画像に変換するプログラムは [climg2base64](https://github.com/nodamushi/climg2base64) を使用します。
-
-バイナリは配布してない（誰か助けて）ため、以下の手順でインストールしてください。
-
-1. [Rust をインストールする](https://www.rust-lang.org/ja/learn/get-started)
-2. 以下のコマンドを実行する
-```sh
-cargo install --git https://github.com/nodamushi/climg2base64
-```
-
-Bash や PowerShell などを開いて `climg2base64` と入力して起動すればインストール成功です。
-
 ---
 
 ## 使い方

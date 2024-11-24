@@ -118,6 +118,8 @@ You can change the rules inserted in the editor by changing the `udon.rule` sett
 
 The above settings are for files with .txt extension and .md extension. Patterns are searched from top to bottom.
 
+![](docs/images/user_insert.gif)
+
 ---
 
 ## Settings
