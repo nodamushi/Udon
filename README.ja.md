@@ -24,6 +24,27 @@
 
 ---
 
+## インストール
+
+本プラグインは画像の保存に [climg2base64](https://github.com/nodamushi/climg2base64) を使用します。
+
+プラグイン起動時に、下記の対応環境向けに私がビルドしたバイナリを自動的にダウンロードします。
+
+- Windows (x86_64)
+- Linux (x86_64, aarch64)
+
+> [!IMPORTANT]
+> 私に必要で確認可能な環境向けだけバイナリを作っています。各種環境向けのビルドについてのサポートはできかねます。
+
+
+対応していない環境では、自分で `climg2base64` をビルドし、そのパスを `udon.execPath` に設定してください。
+
+
+```sh
+cargo install --git https://github.com/nodamushi/climg2base64
+```
+
+
 ## インストール方法
 
 > [!IMPORTANT]
@@ -208,8 +229,15 @@ foobar.jpg
 - `$imageDirnameBasename`, `$imageDirBasename` : `$imageDir` のディレクトリ名
 - `$imageFormat` : 画像ファイルフォーマット
 
+---
 
 ## 免責事項
 
 - 本プラグインは個人が開発したものであり、利用におけるすべての責任はユーザー自身にあります
 - 本プラグインを使用したことによる損害やトラブルについて、開発者は一切の責任を負いません
+
+---
+
+## ライセンス
+
+MIT ライセンス or Unlicense

@@ -3,9 +3,7 @@ import { Udon } from './udon';
 
 let udon: Udon | null = null;
 
-export function activate(context: vscode.ExtensionContext) {
-	console.log("koko!");
-
+export async function activate(context: vscode.ExtensionContext) {
 	udon = new Udon(context);
 	let disposable = vscode.commands.registerCommand('udon.pasteImage', async () => {
 		if (udon) {
@@ -13,6 +11,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 	context.subscriptions.push(disposable);
+	await udon.auto_download_pre_build();
 }
 
 export function deactivate() {

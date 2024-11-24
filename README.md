@@ -27,20 +27,22 @@ Please consider using [Paste Image](https://marketplace.visualstudio.com/items?i
 
 ## Installation
 
+This plugin uses [climg2base64](https://github.com/nodamushi/climg2base64) for saving images.
+
+When the plugin starts, it automatically downloads pre-built binaries for the following supported environments:
+
+- Windows (x86_64)
+- Linux (x86_64, aarch64)
+
 > [!IMPORTANT]
-> 😢 Someone please teach this Rust novice how to do multi-platform builds...
+> Binaries are only provided for environments I can personally use and verify. Support for building binaries for other environments is not available.
 
-The program for converting clipboard content into an image file uses [climg2base64](https://github.com/nodamushi/climg2base64).
-
-Since binaries are not distributed (help needed!), follow the steps below to install:
-
-1. [Install Rust](https://www.rust-lang.org/learn/get-started)
-2. Run the following command:
+If your environment is not supported, please build `climg2base64` yourself and set its path to `udon.execPath`.
 
 ```sh
 cargo install --git https://github.com/nodamushi/climg2base64
 ```
-Open a terminal (Bash, PowerShell, etc.) and type `climg2base64`. If it runs, the installation was successful.
+
 
 ---
 
@@ -205,7 +207,15 @@ The following variables do not take any arguments. Their naming conventions foll
 - `$imageDirnameBasename`, `$imageDirBasename`: The name of the directory for `$imageDir`.
 - `$imageFormat`: The format of the image file.
 
-### Disclaimer
+---
+
+## Disclaimer
 
 - This plugin was developed by an individual, and the user assumes full responsibility for its usage.
 - The developer does not take any responsibility for damages or issues resulting from the use of this plugin.
+
+---
+
+## License
+
+MIT License or Unlicense

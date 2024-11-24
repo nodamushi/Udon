@@ -1,8 +1,24 @@
+import * as os from 'os';
 import * as vscode from 'vscode';
 import * as vsuri from 'vscode-uri';
 import { basenameOfUri, EvalEnv, EvalNode, evalPath, evalString, parseExpression, Uri } from './eval';
 import path = require('path');
-import { getClipboardAsImageBase64, Result } from './clip';
+import { getClipboardAsImageBase64, getVersion, Result } from './climg2base64';
+import * as https from 'https';
+import * as zlib from 'zlib';
+import * as fs from 'fs';
+import * as crypto from 'crypto';
+import * as tar from 'tar';
+import * as unzipper from 'unzipper';
+
+// -------------------------------------------------------------
+// v0.1.0
+// -------------------------------------------------------------
+const PRE_BUILD = {
+  "linux-arm64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.0/climg2base64-linux-aarch64.tar.gz", "climg2base64", "a6fcd37a1dcd891c2a1b065a2079fa31"],
+  "linux-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.0/climg2base64-linux-x86_64.tar.gz", "climg2base64", "f322ff62a50edc7eec2144736e824e64"],
+  "win32-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.0/climg2base64-windows-x86_64.zip", "climg2base64.exe", "225aec2ef55edffd429255ce2c6c3cb8"],
+} as Record<string, [string, string, string]>;
 
 // -------------------------------------------------------------
 // Config
@@ -191,7 +207,8 @@ function getConfiguration(uc: UserConfig, throwError: boolean): Config {
   } else {
     format = DEFAULT_IMAGE_FORMAT;
   }
-  const exec_path = uc.execPath || (isWin() ? "climg2base64.exe" : "climg2base64");
+  let exec_path = uc.execPath || "";
+  exec_path = exec_path.trim();
 
   const base_directory_str = uc.baseDirectory || DEFAULT_BASE_DIRECTORY;
   let base_directory: EvalNode;
@@ -286,8 +303,60 @@ export class Udon implements Logger {
     this.channel.dispose();
   }
 
+  get_default_bin_path() {
+    return defualt_climg2base64_path(this.context.extensionPath);
+  }
+  get_default_bin_dir() {
+    return defualt_climg2base64_dir(this.context.extensionPath);
+  }
+
   async pasteUdon() {
-    await pastaRamen(this.config, this);
+    await pastaRamen(this.config, this.get_default_bin_path(), this);
+  }
+
+  async download_pre_build(show_err_msg: boolean) {
+    const x = get_download_url();
+    if (!x) {
+      this.log("[ERROR] This OS and CPU are not supported. Please build yourself.");
+      this.log("        cargo install --git https://github.com/nodamushi/climg2base64");
+      if (show_err_msg) {
+        vscode.window.showErrorMessage("This OS/CPU are not supported. Please build climg2base64 yourself.")
+      }
+      return false;
+    } else {
+      const dir = this.get_default_bin_dir();
+      this.log(`[INFO] Download: ${x[0]} (${x[2]})`)
+      this.log(`[INFO] Save directory: ${dir}`)
+      try {
+        vscode.window.showInformationMessage("Download climg2base64 binary.");
+        let y = await download(x, dir);
+        return y !== null;
+      } catch (err) {
+        this.log(`[ERROR] Fail to download ${x[0]}: ${err}`);
+        if (show_err_msg) {
+          vscode.window.showErrorMessage(`Fail to download ${x[0]}`);
+        }
+        return false;
+      }
+    }
+  }
+
+  async auto_download_pre_build() {
+    if (!this.config.execPath) {
+      const p = this.get_default_bin_path();
+      const downloaded = await exists(p);
+      if (!downloaded) {
+        this.log("[INFO] Auto download pre build climg2base64 binary.");
+        await this.download_pre_build(false);
+      } else {
+        try {
+          const v = await getVersion(p)
+          this.log("[INFO] climg2base64 version: " + v);
+        } catch (err) {
+          this.log(`[ERROR] Fail to get version: ${err}`);
+        }
+      }
+    }
   }
 }
 
@@ -323,57 +392,63 @@ interface SaveImageInfo {
 }
 const NEWLINE_TEXT = /[\r\n]/g;
 const REMOVE_TEXT = /[[\r\n\t\\\]*?"<>|&%]/g;
+
+interface ParseSelectResult {
+  name?: string;
+  max_width?: number;
+  max_height?: number;
+  format?: FormatName;
+  overwrite?: boolean;
+};
+
 /**
  * parse "[image file name][,w=WIDTH][,h=HEIGHT]"
  */
-function parseSelectText(text: string | null) {
+function parseSelectText(text: string | null): ParseSelectResult {
+  let v: ParseSelectResult = {};
   if (!text) {
-    return {};
+    return v;
   }
+
   text = text.trim().replace(NEWLINE_TEXT, "");
   const texts = text.split(",");
 
-  let name: string | undefined = undefined;
-  let max_width: number | undefined = undefined;
-  let max_height: number | undefined = undefined;
-  let format: FormatName | undefined = undefined;
-  let overwrite: boolean | undefined = undefined;
   for (let x of texts) {
     x = x.trim();
     if (x.startsWith("w=") || x.startsWith("w:")) {
       let y = x.substring(2).trim();
-      max_width = parseInt(y, 10);
+      v.max_width = parseInt(y, 10);
     } else if (x.startsWith("h=") || x.startsWith("h:")) {
       let y = x.substring(2).trim();
-      max_height = parseInt(y, 10);
+      v.max_height = parseInt(y, 10);
     } else if (FORMAT.includes(x as any)) {
-      format = x as any;
+      v.format = x as any;
     } else if (x === "jpg") {
-      format = "jpeg";
+      v.format = "jpeg";
     } else {
-      name = x.trim();
+      v.name = x.trim();
     }
   }
 
-  if (name) {
-    if (name.startsWith("?")) {
-      overwrite = true;
+  if (v.name) {
+    if (v.name.startsWith("?")) {
+      v.overwrite = true;
     }
-    name = name.replace(REMOVE_TEXT, "").trim();
+    let name = v.name.replace(REMOVE_TEXT, "").trim();
     let ext = path.extname(name);
     if (EXT_FORMAT[ext]) {
-      format = EXT_FORMAT[ext];
+      v.format = EXT_FORMAT[ext];
       name = name.substring(0, name.length - ext.length);
+    }
+
+    if (name.length == 0) {
+      delete v.name;
+    } else {
+      v.name = name;
     }
   }
 
-  return {
-    name: name,
-    max_width: max_width,
-    max_height: max_height,
-    format: format,
-    overwrite: overwrite
-  }
+  return v;
 }
 
 /**
@@ -429,7 +504,7 @@ async function getSaveImagePath(
 }
 
 
-async function pastaRamen(config: Config, logger: Logger) {
+async function pastaRamen(config: Config, default_climg2base64: string, logger: Logger) {
   let editor = vscode.window.activeTextEditor;
   if (!editor) {
     logger.log("[ERROR] An active editor NOT found.");
@@ -449,7 +524,7 @@ async function pastaRamen(config: Config, logger: Logger) {
     date: new Date(),
     editor: editorUri,
     workspace: workspaceUri,
-    workspaces: vscode.workspace.workspaceFolders?.map((x)=> {
+    workspaces: vscode.workspace.workspaceFolders?.map((x) => {
       return [x.name, x.uri]
     })
   };
@@ -463,15 +538,35 @@ async function pastaRamen(config: Config, logger: Logger) {
       return;
     }
   }
-  logger.log(`[INFO] exec path: ${config.execPath}`);
-  let resultP = getClipboardAsImageBase64(info.format,
-    {
-      command: config.execPath,
-      width: info.max_width,
-      height: info.max_height
+  let execpath = config.execPath;
+  logger.log(`[INFO] exec path: ${execpath}`);
+  if (execpath.length == 0) {
+    if (!(await exists(default_climg2base64))) {
+      logger.log(`[ERRRO] climg2base64 path is not configured`);
+      vscode.window.showErrorMessage("climg2base64 path is not configured");
+      return;
     }
-  );
+    execpath = default_climg2base64;
+  }
+  if (!(await exists(execpath))) {
+    logger.log(`[ERRRO] exec path: ${execpath} not found.`);
+    vscode.window.showErrorMessage(`${execpath} not found.`);
+    return;
+  }
 
+  let resultP;
+  try {
+    resultP = getClipboardAsImageBase64(execpath, info.format,
+      {
+        width: info.max_width,
+        height: info.max_height
+      }
+    );
+  } catch (err) {
+    logger.log(`[ERRRO] climg2base64 error. ${err}`);
+    vscode.window.showErrorMessage(`climg2base64 error. ${err}`);
+    return;
+  }
 
   env.image = info.path;
   env.image_format = info.format;
@@ -519,6 +614,165 @@ async function pastaRamen(config: Config, logger: Logger) {
   });
 }
 
+
+//-------------------------------------------------------
+// Download
+//-------------------------------------------------------
+
+
+function md5sum(path: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('md5');
+    fs.createReadStream(path)
+      .on('data', (chunk) => hash.update(chunk))
+      .on('end', () => resolve(hash.digest('hex')))
+      .on('error', (err) => reject(err));
+  });
+}
+
+function get_download_url() {
+  let p = os.platform();
+  let name: string = p;
+  const a = os.arch();
+  name += "-" + a;
+  if (name in PRE_BUILD) {
+    return PRE_BUILD[name];
+  } else {
+    return null;
+  }
+}
+
+function defualt_climg2base64_dir(extension_path: string) {
+  return path.join(extension_path, "bin");
+}
+
+function defualt_climg2base64_path(extension_path: string) {
+  if (isWin()) {
+    return path.join(extension_path, "bin", "climg2base64.exe");
+  } else {
+    return path.join(extension_path, "bin", "climg2base64");
+  }
+}
+
+
+function download_url(url: string, save_path: string, maxRedirects: number = 5) {
+  return new Promise<string>((resolve, reject) => {
+    https.get(url, (response) => {
+      // Redirect check
+      if (response.statusCode === 301 || response.statusCode === 302) {
+        const location = response.headers.location;
+        if (maxRedirects == 0) {
+          reject(new Error('Too many redirects'));
+        } else if (location) {
+          download_url(location, save_path, maxRedirects - 1).then(resolve).catch(reject);
+        } else {
+          reject(new Error('Redirection location not provided'));
+        }
+        return;
+      } else if (response.statusCode !== 200) {
+        fs.unlink(save_path, () => {
+          reject(new Error(`HTTP status code ${response.statusCode}`));
+        });
+        return;
+      }
+      const file = fs.createWriteStream(save_path);
+      file
+        .on('finish', () => {
+          file.close();
+          md5sum(save_path).then(resolve).catch(reject);
+        })
+        .on("error", (err) => {
+          file.close();
+          fs.unlink(save_path, () => reject(err));
+        });
+      response.pipe(file);
+    }).on("error", (err) => {
+      fs.unlink(save_path, () => reject(err));
+    });
+  });
+}
+
+async function unpack(file: string, outdir: string) {
+  if (file.endsWith(".tar.gz")) {
+    await tar.x({
+      file: file,
+      cwd: outdir
+    });
+  } else if (file.endsWith('.zip')) {
+    await fs.createReadStream(file)
+      .pipe(unzipper.Extract({ path: outdir }))
+      .promise();
+  }
+}
+
+function deleteFile(path: string) {
+  return new Promise<void>((resolve, reject) => {
+    fs.unlink(path, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    })
+  });
+}
+
+function exists(path: string) {
+  return new Promise<boolean>((resolve, reject) => {
+    fs.stat(path, (err) => {
+      if (err) {
+        resolve(false);
+      } else {
+        resolve(true);
+      }
+    })
+  });
+}
+
+function mkdir(dir: string) {
+  return new Promise<void>((resolve, reject) => {
+    fs.mkdir(dir, { recursive: true }, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    })
+  })
+}
+
+function getExtname(url: vscode.Uri) {
+  if (url.path.endsWith(".tar.gz")) {
+    return ".tar.gz";
+  } else {
+    return vsuri.Utils.extname(url);
+  }
+}
+
+async function download(url_contents: [string, string, string], save_dir: string) {
+  const [url, contents, md5] = url_contents;
+  let u = vscode.Uri.parse(url);
+  const ext = getExtname(u);
+  const tmp_name = "tmp" + ext;
+  const tmp_path = path.join(save_dir, tmp_name);
+  if (!await exists(save_dir)) {
+    await mkdir(save_dir);
+  }
+
+  const download_md5 = await download_url(url, tmp_path);
+  if (download_md5 !== md5) {
+    throw new Error(`${url} MD5 Error: ${md5} != ${download_md5}`);
+  }
+  await unpack(tmp_path, save_dir);
+  await deleteFile(tmp_path);
+  const output = path.join(save_dir, contents);
+  if (await exists(output)) {
+    return output;
+  } else {
+    return null;
+  }
+}
+
 //-------------------------------------------------------
 // Test: src/test/suite/udon.test.ts
 //-------------------------------------------------------
@@ -535,4 +789,8 @@ export const __test__ = {
   getRule,
   parseSelectText,
   getSaveImagePath,
+  get_download_url,
+  patternToRegex,
+  download,
+  PRE_BUILD,
 };

@@ -91,19 +91,19 @@ suite('exp Test Suite', () => {
     assert.equal(ret.equals(new t.DateNode("YYYY-DD-MM hh-mm-ss")), true, `${p}: ${ret.debug()}`);
   });
 
-  test('relImg parse 1', () => {
+  test('relImage parse 1', () => {
     const p = "$relImage";
     const ret = t.parseExpression(p);
-    assert.equal(ret.equals(new t.RelativeNode("image", new t.VariableNode("file"))), true, `${p}: ${ret.debug()}`);
+    assert.equal(ret.equals(new t.RelativeNode("image", new t.VariableNode("fileDirname"))), true, `${p}: ${ret.debug()}`);
   });
 
-  test('relImg parse 2', () => {
+  test('relImage parse 2', () => {
     const p = "${relImage}";
     const ret = t.parseExpression(p);
-    assert.equal(ret.equals(new t.RelativeNode("image", new t.VariableNode("file"))), true, `${p}: ${ret.debug()}`);
+    assert.equal(ret.equals(new t.RelativeNode("image", new t.VariableNode("fileDirname"))), true, `${p}: ${ret.debug()}`);
   });
 
-  test('relImg parse 3', () => {
+  test('relImage parse 3', () => {
     const p = "${relImage: ${workspaceFolder}/img }";
     const ret = t.parseExpression(p);
     const l = new t.NodeList();
@@ -112,16 +112,16 @@ suite('exp Test Suite', () => {
     assert.equal(ret.equals(new t.RelativeNode("image", l)), true, `${p}: ${ret.debug()}`);
   });
 
-  test('relImg parse 4', () => {
+  test('relImage parse 4', () => {
     const p = "${relImage: ${workspaceFolder} }";
     const ret = t.parseExpression(p);
     assert.equal(ret.equals(new t.RelativeNode("image", new t.VariableNode("workspaceFolder"))), true, `${p}: ${ret.debug()}`);
   });
 
-  test('relImg parse 5', () => {
+  test('relImage parse 5', () => {
     const p = "${relImage:  }";
     const ret = t.parseExpression(p);
-    assert.equal(ret.equals(new t.RelativeNode("image", new t.VariableNode("file"))), true, `${p}: ${ret.debug()}`);
+    assert.equal(ret.equals(new t.RelativeNode("image", new t.VariableNode("fileDirname"))), true, `${p}: ${ret.debug()}`);
   });
 
   test('evalString date YYYY-MM-DD hh/mm/ss', () => {

@@ -1,3 +1,4 @@
+import { rejects } from "assert";
 import { execFile, ExecFileException } from "child_process";
 
 
@@ -25,20 +26,36 @@ function getErrorCodeMsg(error?: ExecFileException) {
   return "";
 }
 
+export function getVersion(cmd: string) {
+  let arg = [
+    "--version",
+  ];
+  return new Promise<string>((resolve, reject) => execFile(cmd, arg, (error, stdout) => {
+    if (error) {
+      reject(error);
+    } else {
+      const arr = stdout.split(" ");
+      if (arr.length != 2) {
+        reject(new Error("Unknown version format: " + stdout))
+      } else {
+        resolve(arr[1].trim());
+      }
+    }
+  }))
+}
 
 /**
  * async run climg2base64
  */
 export function getClipboardAsImageBase64(
+  cmd: string,
   format: string,
   option: {
-    command?: string,
     width?: number,
     height?: number,
     maxBufferMB?: number,
   }): Promise<Result> {
 
-  const cmd = option.command || "climg2base64";
   const maxBufferMB = option.maxBufferMB || 128;
   let arg = [
     format,
@@ -57,7 +74,7 @@ export function getClipboardAsImageBase64(
 
   return new Promise<Result>(resolve => execFile(cmd, arg, {
     maxBuffer: maxBufferMB * 1024 * 1024
-  },(error, stdout, stderr) => {
+  }, (error, stdout, stderr) => {
     if (error !== null && error.code !== 0) {
       resolve({
         ok: false,
