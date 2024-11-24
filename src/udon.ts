@@ -293,12 +293,25 @@ export class Udon implements Logger {
 
   constructor(ctx: vscode.ExtensionContext) {
     this.context = ctx;
-    this.config = getConfiguration(getUserConfiguration(), false);
+    try {
+      this.config = getConfiguration(getUserConfiguration(), true);
+    } catch (err) {
+      this.config = getConfiguration(getUserConfiguration(), false);
+      this.log(`[ERROR] Config: ${err}`)
+      vscode.window.showErrorMessage(`Udon🍜 configuration error: ${err}`)
+    }
+    this.config = getConfiguration(getUserConfiguration(), true);
     this.channel = vscode.window.createOutputChannel("udon🍜");
     this.channel.appendLine(`Extension Path: ${ctx.extension.extensionPath}`);
     ctx.subscriptions.push(
       vscode.workspace.onDidChangeConfiguration((event) => {
-        this.config = getConfiguration(getUserConfiguration(), false);
+        try {
+          this.config = getConfiguration(getUserConfiguration(), true);
+        } catch (err) {
+          this.config = getConfiguration(getUserConfiguration(), false);
+          this.log(`[ERROR] Config: ${err}`)
+          vscode.window.showErrorMessage(`Udon🍜 configuration error: ${err}`)
+        }
       })
     );
   }
@@ -372,7 +385,7 @@ export class Udon implements Logger {
 function testRulePattern(pattern: RegExp, uri: vscode.Uri) {
   let current = basenameOfUri(uri);
   let dir = parentOfUri(uri);
-  while(true) {
+  while (true) {
     if (pattern.test(current)) {
       return true;
     }

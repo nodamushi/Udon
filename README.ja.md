@@ -231,6 +231,29 @@ foobar.jpg
 
 ---
 
+## 初期設定 udon.rule
+
+- Markdown
+- Textile
+- Ascii Dock
+- HTML
+- Doxygen (C++)
+
+```json
+[
+  ["*.md", "![](${relImage:${fileDirname}})"],
+  ["*.textile", "!${relImage:${fileDirname}}!"],
+  ["*.adoc", "image::${relImage:${fileDirname}}[]"],
+  ["*.html", "<img src=\"${relImage:${fileDirname}}\">"],
+  ["*.cpp", "@image html ${relImage:${workspaceFolder}}"],
+  ["*.hpp", "@image html ${relImage:${workspaceFolder}}"],
+  ["*", "${relImage:${workspaceFolder}}"]
+]
+```
+
+
+---
+
 ## 免責事項
 
 - 本プラグインは個人が開発したものであり、利用におけるすべての責任はユーザー自身にあります

@@ -209,6 +209,28 @@ The following variables do not take any arguments. Their naming conventions foll
 
 ---
 
+## Default udon.rule
+
+- Markdown
+- Textile
+- Ascii Dock
+- HTML
+- Doxygen (C++)
+
+```json
+[
+  ["*.md", "![](${relImage:${fileDirname}})"],
+  ["*.textile", "!${relImage:${fileDirname}}!"],
+  ["*.adoc", "image::${relImage:${fileDirname}}[]"],
+  ["*.html", "<img src=\"${relImage:${fileDirname}}\">"],
+  ["*.cpp", "@image html ${relImage:${workspaceFolder}}"],
+  ["*.hpp", "@image html ${relImage:${workspaceFolder}}"],
+  ["*", "${relImage:${workspaceFolder}}"]
+]
+```
+
+---
+
 ## Disclaimer
 
 - This plugin was developed by an individual, and the user assumes full responsibility for its usage.

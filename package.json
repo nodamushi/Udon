@@ -2,7 +2,7 @@
   "name": "udon",
   "displayName": "Udon🍜",
   "description": "Udon: A simple extension to paste images effortlessly.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "repository": {
     "type": "git",
     "url": "https://github.com/nodamushi/Udon"
@@ -19,6 +19,17 @@
   ],
   "categories": [
     "Other"
+  ],
+  "keywords": [
+    "paste",
+    "image",
+    "markdown",
+    "html",
+    "doxygen",
+    "textile",
+    "ascii dock",
+    "paste image",
+    "keybindings"
   ],
   "activationEvents": [],
   "main": "./out/extension.js",
