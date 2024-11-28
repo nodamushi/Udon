@@ -239,10 +239,10 @@ function getConfiguration(uc: UserConfig, throwError: boolean): Config {
     if (throwError) {
       throw new ConfigError('baseDirectories', "baseDirectories is not array");
     } else {
-      base_directories_any = DEFAULT_REPLACE_RULE;
+      base_directories_any = DEFAULT_BASE_DIRECTORIES;
     }
   } else if (base_directories_any.length === 0) {
-    base_directories_any = DEFAULT_REPLACE_RULE;
+    base_directories_any = DEFAULT_BASE_DIRECTORIES;
   }
   let base_directories: Rule[];
   try {
@@ -843,9 +843,15 @@ export const __test__ = {
   Udon,
   DEFAULT_IMAGE_FORMAT,
   DEFAULT_BASE_DIRECTORY,
+  DEFAULT_BASE_DIRECTORY_NODE,
+  DEFAULT_BASE_DIRECTORIES,
   DEFAULT_BASE_FILENAME,
+  DEFAULT_BASE_FILENAME_NODE,
   DEFAULT_REPLACE_RULE,
   DEFAULT_RULE,
+  DEFAULT_SUFFIXS_LENGTH,
+  DEFAULT_SUFFIXS_DELIMITER,
+
   getConfiguration,
   getUserConfiguration,
   ConfigError,

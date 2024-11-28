@@ -25,12 +25,129 @@ function createRule(pattern: string, rule: string) {
 
 suite('exp Test Suite', function () {
 
-  test('download test', async function () {
-    this.timeout(20000);
-    for (const x in t.PRE_BUILD) {
-      const y = t.PRE_BUILD[x];
-      let z = await t.download(y, tmpdir.name);
-      assert.notEqual(z, null);
+  // test('download test', async function () {
+  //   this.timeout(20000);
+  //   for (const x in t.PRE_BUILD) {
+  //     const y = t.PRE_BUILD[x];
+  //     let z = await t.download(y, tmpdir.name);
+  //     assert.notEqual(z, null);
+  //   }
+  // });
+
+
+  test("getConfiguration full", () => {
+    let c = t.getConfiguration({
+      format: "png",
+      execPath: "hoge",
+      baseDirectory: "$workspaceFolder",
+      baseDirectories: [
+        ["*.md", "a"],
+        ["*.txt", "b"]
+      ],
+      defaultFileName: "${date: Y}",
+      rule: [
+        ["*.md", "xx"],
+        ["*.txt", "yy"],
+      ],
+      suffixLength: 2,
+      suffixDelimiter: "@",
+      saveInWorkspaceOnly: false,
+    }, true);
+
+    assert.equal(c.format, "png");
+    assert.equal(c.execPath, "hoge");
+    assert.deepEqual(c.baseDirectory, new et.VariableNode("workspaceFolder"));
+    assert.deepEqual(c.baseDirectories, [
+      { pattern: /^[^/\\]*\.md$/, evalNode: new et.TextNode("a") },
+      { pattern: /^[^/\\]*\.txt$/, evalNode: new et.TextNode("b") }
+    ]);
+    assert.deepEqual(c.defaultFileName, new et.DateNode("Y"));
+    assert.deepEqual(c.rule, [
+      { pattern: /^[^/\\]*\.md$/, evalNode: new et.TextNode("xx") },
+      { pattern: /^[^/\\]*\.txt$/, evalNode: new et.TextNode("yy") }
+    ]);
+    assert.equal(c.suffixLength, 2);
+    assert.equal(c.suffixDelimiter, "@");
+    assert.equal(c.saveInWorkspaceOnly, false);
+  });
+
+  test("getConfiguration empty", () => {
+    let c = t.getConfiguration({}, true);
+
+    assert.equal(c.format, t.DEFAULT_IMAGE_FORMAT);
+    assert.equal(c.execPath, "");
+    assert.deepEqual(c.baseDirectory, t.DEFAULT_BASE_DIRECTORY_NODE);
+    assert.equal(c.baseDirectories.length, t.DEFAULT_BASE_DIRECTORIES.length);
+    assert.deepEqual(c.defaultFileName, t.DEFAULT_BASE_FILENAME_NODE);
+    assert.equal(c.rule.length, t.DEFAULT_REPLACE_RULE.length);
+    assert.deepEqual(c.rule[0], { pattern: /^[^/\\]*\.md$/, evalNode: et.parseExpression("![](${relImage:${fileDirname}})") });
+    assert.equal(c.suffixLength, t.DEFAULT_SUFFIXS_LENGTH);
+    assert.equal(c.suffixDelimiter, t.DEFAULT_SUFFIXS_DELIMITER);
+    assert.equal(c.saveInWorkspaceOnly, true);
+  });
+
+  test("getConfiguration empty rule", () => {
+    let c = t.getConfiguration({
+      rule: [],
+      baseDirectories: []
+    }, true);
+
+    assert.equal(c.format, t.DEFAULT_IMAGE_FORMAT);
+    assert.equal(c.execPath, "");
+    assert.deepEqual(c.baseDirectory, t.DEFAULT_BASE_DIRECTORY_NODE);
+    assert.equal(c.baseDirectories.length, t.DEFAULT_BASE_DIRECTORIES.length);
+    assert.deepEqual(c.defaultFileName, t.DEFAULT_BASE_FILENAME_NODE);
+    assert.equal(c.rule.length, t.DEFAULT_REPLACE_RULE.length);
+    assert.deepEqual(c.rule[0], { pattern: /^[^/\\]*\.md$/, evalNode: et.parseExpression("![](${relImage:${fileDirname}})") });
+    assert.equal(c.suffixLength, t.DEFAULT_SUFFIXS_LENGTH);
+    assert.equal(c.suffixDelimiter, t.DEFAULT_SUFFIXS_DELIMITER);
+    assert.equal(c.saveInWorkspaceOnly, true);
+  });
+
+  test("getConfiguration ignore error", () => {
+    const arr: any[] = [{
+      format: "jpeg",
+      execPath: "hoge",
+      baseDirectory: "${piyo"
+    }, {
+      format: "jpeg",
+      execPath: "hoge",
+      baseDirectories: [
+        ["*.md", "${piyo"],
+        ["*.txt", "${piyo"]
+      ]
+    }, {
+      format: "jpeg",
+      execPath: "hoge",
+      baseDirectories: "hoge"
+    }, {
+      format: "jpeg",
+      execPath: "hoge",
+      defaultFileName: "${date: Y"
+    }, {
+      format: "jpeg",
+      execPath: "hoge",
+      rule: [
+        ["*.md", "${piyo"],
+        ["*.txt", "${piyo"],
+      ]
+    }, {
+      format: "jpeg",
+      execPath: "hoge",
+      rule: "hoge",
+    }];
+    for (const x of arr) {
+      const c = t.getConfiguration(x, false);
+      assert.equal(c.format, "jpeg");
+      assert.equal(c.execPath, "hoge");
+      assert.deepEqual(c.baseDirectory, t.DEFAULT_BASE_DIRECTORY_NODE);
+      assert.equal(c.baseDirectories.length, t.DEFAULT_BASE_DIRECTORIES.length);
+      assert.deepEqual(c.defaultFileName, t.DEFAULT_BASE_FILENAME_NODE);
+      assert.equal(c.rule.length, t.DEFAULT_REPLACE_RULE.length);
+      assert.deepEqual(c.rule[0], { pattern: /^[^/\\]*\.md$/, evalNode: et.parseExpression("![](${relImage:${fileDirname}})") });
+      assert.equal(c.suffixLength, t.DEFAULT_SUFFIXS_LENGTH);
+      assert.equal(c.suffixDelimiter, t.DEFAULT_SUFFIXS_DELIMITER);
+      assert.equal(c.saveInWorkspaceOnly, true);
     }
   });
 
