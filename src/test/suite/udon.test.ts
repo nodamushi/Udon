@@ -4,11 +4,14 @@ import * as udon from '../../udon';
 import * as evals from '../../eval';
 import * as os from 'os';
 import * as tmp from 'tmp';
+import path = require('path');
+import { promises as fs, rmSync } from 'fs';
+import { suiteTeardown } from 'mocha';
 
 const t = udon.__test__;
 const et = evals.__test__;
 const tmpdir = tmp.dirSync();
-tmpdir.removeCallback();
+t.enableDebug(true);
 
 function getDate(year: number, month: number, day: number, hour: number, min: number, sec: number) {
   return new Date(year, month - 1, day, hour, min, sec);
@@ -24,6 +27,9 @@ function createRule(pattern: string, rule: string) {
 }
 
 suite('exp Test Suite', function () {
+  suiteTeardown(() => {
+    rmSync(tmpdir.name, { force: true, recursive: true });
+  });
 
   // test('download test', async function () {
   //   this.timeout(20000);
@@ -150,7 +156,6 @@ suite('exp Test Suite', function () {
       assert.equal(c.saveInWorkspaceOnly, true);
     }
   });
-
 
   test('parseSelectText', () => {
     {
@@ -480,6 +485,67 @@ suite('exp Test Suite', function () {
     }, "", async () => { return false; });
     assert.strictEqual(x.path.path, "/foo/bar/20241124121634.jpg");
 
+  });
+
+  // TODO: getConfiguration Test
+
+  test("loadUdonJsonConfig no file", async () => {
+    const json_path = path.join(tmpdir.name, "udon.udon.udon.udon");
+    let x = await t.loadUdonJsonConfig(vscode.Uri.file(json_path));
+    assert.strictEqual(x, null);
+  });
+
+  test("loadUdonJsonConfig", async () => {
+    const json_data = `{
+    "udon.format": "png",
+    "saveInWorkspaceOnly": true
+  }`;
+    const json_path = path.join(tmpdir.name, "udon.json");
+    await fs.writeFile(json_path, json_data);
+    let x = await t.loadUdonJsonConfig(vscode.Uri.file(json_path));
+    assert.notStrictEqual(x, null);
+    let y = x as any;
+    assert.equal(y.format, "png");
+    assert.equal(y.saveInWorkspaceOnly, true);
+    for (const c of t.CONFIG_NAME) {
+      if (!(c === "format" || c === "saveInWorkspaceOnly")) {
+        assert.strictEqual(y[c], undefined);
+      }
+    }
+  });
+
+  test("loadUdonJsonConfigs", async () => {
+    const json_data1 = `{
+      "udon.format": "png",
+      "saveInWorkspaceOnly": true
+    }`;
+    const json_data2 = `{
+      "format": "jpg",
+      "udon.rule": [
+        ["a", "b"],
+        ["c", "d"]
+      ]
+    }`;
+    const json_path1 = path.join(tmpdir.name, "udon1.json");
+    const json_path2 = path.join(tmpdir.name, "udon2.json");
+    await fs.writeFile(json_path1, json_data1);
+    await fs.writeFile(json_path2, json_data2);
+    let x = await t.loadUdonJsonConfigs([
+      vscode.Uri.file(json_path1),
+      vscode.Uri.file(json_path2)
+    ]);
+    assert.notStrictEqual(x, null, "load failed");
+    let y = x as any;
+    assert.equal(y.format, "png");
+    assert.equal(y.saveInWorkspaceOnly, true);
+    assert.deepStrictEqual(y.rule, [
+      ["a", "b"], ["c", "d"]
+    ]);
+    for (const c of t.CONFIG_NAME) {
+      if (!(c === "format" || c === "saveInWorkspaceOnly" || c === "rule")) {
+        assert.strictEqual(y[c], undefined, `${c} has value. ${y[c]}`);
+      }
+    }
   });
 
 });

@@ -1,7 +1,7 @@
 import * as os from 'os';
 import * as vscode from 'vscode';
 import * as vsuri from 'vscode-uri';
-import { basenameOfUri, EvalEnv, EvalNode, evalPath, evalString, parentOfUri, parseExpression, Uri } from './eval';
+import { basenameOfUri, EvalEnv, EvalNode, evalPath, evalString, joinUri, parentOfUri, parseExpression, Uri } from './eval';
 import path = require('path');
 import { getClipboardAsImageBase64, getVersion, Result } from './climg2base64';
 import * as https from 'https';
@@ -19,6 +19,11 @@ const PRE_BUILD = {
   "linux-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.0/climg2base64-linux-x86_64.tar.gz", "climg2base64", "f322ff62a50edc7eec2144736e824e64"],
   "win32-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.0/climg2base64-windows-x86_64.zip", "climg2base64.exe", "225aec2ef55edffd429255ce2c6c3cb8"],
 } as Record<string, [string, string, string]>;
+
+// -------------------------------------------------------------
+// Plugin config file
+// -------------------------------------------------------------
+const PLUGIN_CONFIG_FILE = "udon.json";
 
 // -------------------------------------------------------------
 // Config
@@ -159,12 +164,28 @@ function get<T>(name: ConfigName, cfg?: vscode.WorkspaceConfiguration): T | unde
   return udon.get<T>(name);
 }
 
+let __debug_assertion__ = false; // true: test only
+function enableDebug(x: boolean) {
+  __debug_assertion__ = x;
+}
+function assertFullUserConfig(u: UserConfig) {
+  if (__debug_assertion__) {
+    // check all config parameter
+    for (const c of CONFIG_NAME) {
+      if (!(c in u)) {
+        throw Error(`Fatal Error: ${c} is not implemented`)
+      }
+    }
+  }
+  return u;
+}
+
 /**
  * read user configuration
  */
 function getUserConfiguration(): UserConfig {
   const c = vscode.workspace.getConfiguration('udon');
-  return {
+  return assertFullUserConfig({
     format: get<string>('format', c),
     execPath: get<string>('execPath', c),
     baseDirectory: get<string>('baseDirectory', c),
@@ -174,7 +195,7 @@ function getUserConfiguration(): UserConfig {
     suffixLength: get<number>('suffixLength', c),
     suffixDelimiter: get<string>('suffixDelimiter', c),
     saveInWorkspaceOnly: get<boolean>('saveInWorkspaceOnly', c),
-  };
+  });
 }
 
 /**
@@ -211,83 +232,103 @@ function convertrule(replace_rule_any: any[]) {
   return replace_rule;
 }
 
-function getConfiguration(uc: UserConfig, throwError: boolean): Config {
+function getConfiguration(uc: UserConfig, throwError: boolean, base?: Config): Config {
 
-  const format0 = (uc.format ?? DEFAULT_IMAGE_FORMAT).trim();
-  let format: FormatName;
-  if (FORMAT.includes(format0 as any)) {
-    format = format0 as any;
-  } else {
-    format = DEFAULT_IMAGE_FORMAT;
-  }
-  let exec_path = uc.execPath || "";
-  exec_path = exec_path.trim();
+  const format: FormatName = (uc.format && FORMAT.includes(uc.format.trim() as any))
+    ? uc.format.trim() as any
+    : (base?.format ?? DEFAULT_IMAGE_FORMAT);
 
-  const base_directory_str = uc.baseDirectory || DEFAULT_BASE_DIRECTORY;
+  const exec_path: string = uc.execPath ? uc.execPath.trim() :
+    (base?.execPath ?? "");
+
   let base_directory: EvalNode;
-  try {
-    base_directory = parseExpression(base_directory_str);
-  } catch (error) {
-    if (throwError) {
-      throw new ConfigError("baseDirectory", error)
-    } else {
-      base_directory = DEFAULT_BASE_DIRECTORY_NODE;
+  if (uc.baseDirectory) {
+    try {
+      base_directory = parseExpression(uc.baseDirectory);
+    } catch (error) {
+      if (throwError) {
+        throw new ConfigError("baseDirectory", error)
+      } else {
+        if (base) {
+          base_directory = base.baseDirectory;
+        } else {
+          base_directory = DEFAULT_BASE_DIRECTORY_NODE;
+        }
+      }
     }
+  } else {
+    base_directory = base?.baseDirectory ?? DEFAULT_BASE_DIRECTORY_NODE;
   }
-  let base_directories_any = uc.baseDirectories || [];
-  if (!Array.isArray(base_directories_any)) {
-    if (throwError) {
-      throw new ConfigError('baseDirectories', "baseDirectories is not array");
-    } else {
-      base_directories_any = DEFAULT_BASE_DIRECTORIES;
-    }
-  } else if (base_directories_any.length === 0) {
-    base_directories_any = DEFAULT_BASE_DIRECTORIES;
-  }
+
   let base_directories: Rule[];
-  try {
-    base_directories = convertrule(base_directories_any);
-  } catch (error) {
-    if (throwError) {
-      throw error;
+  if (uc.baseDirectories) {
+    let d;
+    if (!Array.isArray(uc.baseDirectories)) {
+      if (throwError) {
+        throw new ConfigError('baseDirectories', "baseDirectories is not array");
+      } else {
+        base_directories = base?.baseDirectories ?? convertrule(DEFAULT_BASE_DIRECTORIES);
+      }
+    } else if (uc.baseDirectories.length === 0) {
+      base_directories = base?.baseDirectories ?? convertrule(DEFAULT_BASE_DIRECTORIES);
     } else {
-      base_directories = convertrule(DEFAULT_BASE_DIRECTORIES);
+      try {
+        base_directories = convertrule(uc.baseDirectories);
+      } catch (error) {
+        if (throwError) {
+          throw error;
+        } else {
+          base_directories = base?.baseDirectories ?? convertrule(DEFAULT_BASE_DIRECTORIES);
+        }
+      }
     }
+  } else {
+    base_directories = base?.baseDirectories ?? convertrule(DEFAULT_BASE_DIRECTORIES);
   }
 
-  const base_filename_str = uc.defaultFileName || DEFAULT_BASE_FILENAME;
   let base_filename: EvalNode;
-  try {
-    base_filename = parseExpression(base_filename_str);
-  } catch (error) {
-    if (throwError) {
-      throw new ConfigError("defaultFileName", error)
-    } else {
-      base_filename = parseExpression(DEFAULT_BASE_FILENAME);
+  if (uc.defaultFileName) {
+    try {
+      base_filename = parseExpression(uc.defaultFileName);
+    } catch (error) {
+      if (throwError) {
+        throw new ConfigError("defaultFileName", error)
+      } else {
+        base_filename = base?.defaultFileName ?? parseExpression(DEFAULT_BASE_FILENAME);
+      }
     }
+  } else {
+    base_filename = base?.defaultFileName ?? parseExpression(DEFAULT_BASE_FILENAME);
   }
 
-  let replace_rule_any = uc.rule || DEFAULT_REPLACE_RULE;
-
-  if (!Array.isArray(replace_rule_any)) {
-    if (throwError) {
-      throw new ConfigError('rule', "replace rule is not array");
-    } else {
-      replace_rule_any = DEFAULT_REPLACE_RULE;
-    }
-  } else if (replace_rule_any.length == 0) {
-    replace_rule_any = DEFAULT_REPLACE_RULE;
-  }
   let replace_rule: Rule[];
-  try {
-    replace_rule = convertrule(replace_rule_any);
-  } catch (error) {
-    if (throwError) {
-      throw error;
+  if (uc.rule) {
+    if (!Array.isArray(uc.rule)) {
+      if (throwError) {
+        throw new ConfigError('rule', "replace rule is not array");
+      } else {
+        replace_rule = base?.rule ?? convertrule(DEFAULT_REPLACE_RULE);
+      }
+    } else if (uc.rule.length === 0) {
+      replace_rule = base?.rule ?? convertrule(DEFAULT_REPLACE_RULE);
     } else {
-      replace_rule = convertrule(DEFAULT_REPLACE_RULE);
+      try {
+        replace_rule = convertrule(uc.rule);
+      } catch (error) {
+        if (throwError) {
+          throw error;
+        } else {
+          replace_rule = base?.rule ?? convertrule(DEFAULT_REPLACE_RULE);
+        }
+      }
     }
+  } else {
+    replace_rule = base?.rule ?? convertrule(DEFAULT_REPLACE_RULE);
   }
+
+  const suffix_len = uc.suffixLength ?? (base?.suffixLength ?? DEFAULT_SUFFIXS_LENGTH);
+  const suffix_delimiter = uc.suffixDelimiter ?? (base?.suffixDelimiter ?? DEFAULT_SUFFIXS_DELIMITER);
+  const save_in_workspace = uc.saveInWorkspaceOnly ?? (base?.saveInWorkspaceOnly ?? true);
 
   return {
     format: format,
@@ -296,12 +337,107 @@ function getConfiguration(uc: UserConfig, throwError: boolean): Config {
     baseDirectories: base_directories,
     defaultFileName: base_filename,
     rule: replace_rule,
-    suffixLength: uc.suffixLength ?? DEFAULT_SUFFIXS_LENGTH,
-    suffixDelimiter: uc.suffixDelimiter ?? DEFAULT_SUFFIXS_DELIMITER,
-    saveInWorkspaceOnly: uc.saveInWorkspaceOnly ?? true,
+    suffixLength: suffix_len,
+    suffixDelimiter: suffix_delimiter,
+    saveInWorkspaceOnly: save_in_workspace,
   };
 }
 
+
+function getUdonJsonConfigPaths(editor?: vscode.Uri | null) {
+  let paths: Uri[] = [];
+  const wf = vscode.workspace.workspaceFolders;
+  if (editor) {
+    const ws = vscode.workspace.getWorkspaceFolder(editor);
+    if (ws) {
+      paths.push(joinUri(ws.uri, ".vscode", PLUGIN_CONFIG_FILE));
+    } else if (wf && wf.length === 1) {
+      paths.push(joinUri(wf[0].uri, ".vscode", PLUGIN_CONFIG_FILE));
+    }
+  } else if (wf && wf.length === 1) {
+    paths.push(joinUri(wf[0].uri, ".vscode", PLUGIN_CONFIG_FILE));
+  }
+  if (vscode.workspace.workspaceFile) {
+    paths.push(joinUri(parentOfUri(vscode.workspace.workspaceFile), PLUGIN_CONFIG_FILE));
+  }
+  return paths;
+}
+
+async function loadUdonJsonConfig(uri: vscode.Uri): Promise<UserConfig | null> {
+  if (!await fileExists(uri)) {
+    return null;
+  }
+  try {
+    const f = await vscode.workspace.fs.readFile(uri);
+    const jsonString = Buffer.from(f).toString('utf8')
+    const json = JSON.parse(jsonString);
+    // ---------- Getter  -------------------------------
+    type getter<T> = (name: string) => T | undefined;
+    function get<T>(name: ConfigName, f: getter<T>) {
+      return f(name) ?? f("udon." + name);
+    };
+    const get_type = <T>(name: ConfigName, typename: string) => {
+      return get<T>(name, x => {
+        return (typeof json[x] === typename) ? json[x] : undefined;
+      });
+    }
+    const get_string = (name: ConfigName) => {
+      return get_type<string>(name, "string");
+    };
+    const get_boolean = (name: ConfigName) => {
+      return get_type<boolean>(name, "boolean");
+    };
+    const get_number = (name: ConfigName) => {
+      return get_type<number>(name, "number");
+    };
+    const get_any = (name: ConfigName) => {
+      return get<any>(name, x => {
+        return json[x];
+      });
+    };
+    return assertFullUserConfig({
+      format: get_string('format'),
+      execPath: get_string('execPath'),
+      baseDirectory: get_string('baseDirectory'),
+      baseDirectories: get_any('baseDirectories'),
+      defaultFileName: get_string('defaultFileName'),
+      rule: get_any('rule'),
+      suffixLength: get_number('suffixLength'),
+      suffixDelimiter: get_string('suffixDelimiter'),
+      saveInWorkspaceOnly: get_boolean('saveInWorkspaceOnly'),
+    });
+  } catch (err) {
+    console.log(`Json parse error:  ${uri.path}, ${err}`);
+    throw Error(`JSON Parse error:  ${uri.path}, ${err}`);
+  }
+}
+
+async function loadUdonJsonConfigs(uri: vscode.Uri[]): Promise<UserConfig | null> {
+  const result: UserConfig = {};
+  let count = 0;
+
+  for (const u of uri) {
+    count = 0;
+    const c = await loadUdonJsonConfig(u);
+    if (!c) {
+      continue;
+    }
+
+    for (const n of CONFIG_NAME) {
+      if (n in result) {
+        count += 1;
+      } else if (c[n] !== undefined) {
+        result[n] = c[n];
+        count += 1;
+      }
+    }
+    if (count === CONFIG_NAME.length) {
+      break;
+    }
+  }
+
+  return count === 0 ? null : result;
+}
 
 // -------------------------------------------------------------
 // Udon 🍜
@@ -357,7 +493,22 @@ export class Udon implements Logger {
   }
 
   async pasteUdon() {
-    await pastaRamen(this.config, this.get_default_bin_path(), this);
+    let c = this.config;
+    let list = getUdonJsonConfigPaths(vscode.window.activeTextEditor?.document.uri);
+    for (const l of list) {
+      this.log("udon.json: " + l.path);
+    }
+    try {
+      let c2 = await loadUdonJsonConfigs(list);
+      if (c2) {
+        c = getConfiguration(c2, true, c);
+      }
+    } catch (err) {
+      vscode.window.showErrorMessage(`Udon🍜: udon.json error: ${err}`)
+      return;
+    }
+
+    await pastaRamen(c, this.get_default_bin_path(), this);
   }
 
   async download_pre_build(show_err_msg: boolean) {
@@ -840,6 +991,7 @@ async function download(url_contents: [string, string, string], save_dir: string
 // Test: src/test/suite/udon.test.ts
 //-------------------------------------------------------
 export const __test__ = {
+  CONFIG_NAME,
   Udon,
   DEFAULT_IMAGE_FORMAT,
   DEFAULT_BASE_DIRECTORY,
@@ -863,4 +1015,7 @@ export const __test__ = {
   download,
   testRulePattern,
   PRE_BUILD,
+  enableDebug,
+  loadUdonJsonConfig,
+  loadUdonJsonConfigs
 };

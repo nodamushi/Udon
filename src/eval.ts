@@ -9,6 +9,8 @@ export const parentOfUri = vsuri.Utils.dirname;
 export const basenameOfUri = vsuri.Utils.basename;
 export const extnameOfUri = vsuri.Utils.extname;
 export const resolveUri = vsuri.Utils.resolvePath;
+export const joinUri = vsuri.Utils.joinPath;
+
 function asPath(uristr: UriString) {
   if (typeof uristr === "string") {
     return uristr;
