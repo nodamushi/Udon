@@ -2,14 +2,7 @@
 
 - [日本語(Japanese)](./README.ja.md)
 
-**Udon** is a VSCode plugin that saves images from the clipboard to a file and automatically inserts them into your editor.
-
----
-
-## Recommendations
-
-This plugin was created for personal use only.
-Please consider using [Paste Image](https://marketplace.visualstudio.com/items?itemName=mushan.vscode-paste-image) instead.
+**Udon**🍜 is a VSCode plugin that saves images from the clipboard to a file and automatically inserts them into your editor.
 
 ---
 
@@ -98,13 +91,6 @@ foobar.jpg
 - gif
 - avif
 
-### Change default save directory and file name
-
-Change the save directory by changing the `udon.baseDirectory` and `udon.defaultFileName` settings.
-
-
-You cannot use `$imageX` or `$relImageX`.
-
 ### Change to your preferred insertion rule.
 
 You can change the rules inserted in the editor by changing the `udon.rule` setting.
@@ -118,7 +104,32 @@ You can change the rules inserted in the editor by changing the `udon.rule` sett
 
 The above settings are for files with .txt extension and .md extension. Patterns are searched from top to bottom.
 
-![](docs/images/user_insert.gif)
+![](./docs/images/user_insert.gif)
+
+### Change default save directory and file name
+
+Change the save directory by changing the `udon.baseDirectory`, `udon.baseDirectories` and `udon.defaultFileName` settings.
+
+NOTE: You cannot use `$imageX` or `$relImageX`.
+
+#### `udon.baseDirectories`
+
+`udon.baseDirectories` works similarly to `udon.rule`, allowing you to specify the save directory based on pattern matching. The rules are evaluated in order from top to bottom, and the first matching pattern determines the save directory. If no pattern matches, the default `udon.baseDirectory` is used.
+
+Here’s an example:
+
+```json
+"udon.baseDirectories": [
+  ["foo/*.md", "${workspaceFolder}/foo/md-img"],
+  ["*.md", "${workspaceFolder}/md-img"],
+  ["*.txt", "${workspaceFolder}/txt-img"]
+]
+```
+
+- If you're editing a Markdown file (`*/foo/*.md`), images will be saved in the `foo/md-img` folder.
+- If you're editing a Markdown file (`*.md`), images will be saved in the `md-img` folder.
+- If you're editing a text file (`*.txt`), images will be saved in the `txt-img` folder.
+- If no rule matches, the default `udon.baseDirectory` setting will be used.
 
 ---
 
@@ -128,6 +139,7 @@ The above settings are for files with .txt extension and .md extension. Patterns
 - `udon.saveInWorkspaceOnly`: Prevent saving outside the workspace (displays an error).
 - `udon.execPath`: The path to the executable file of [climg2base64](https://github.com/nodamushi/climg2base64).
 - `udon.baseDirectory`: The base directory for saving images.
+- `udon.baseDirectories`: Specifies the base directory for saving images using pattern matching.
 - `udon.defaultFileName`: The default file name for saved images.
 - `udon.rule`: A string template for the text inserted into the editor when pasting.
 - `udon.suffixLength`: The number of digits in the numbered suffix when filenames conflict (e.g., 001). Setting this to 3 results in a suffix like 001.
@@ -243,3 +255,10 @@ The following variables do not take any arguments. Their naming conventions foll
 ## License
 
 MIT License or Unlicense
+
+---
+
+## Recommendations
+
+This plugin was created for personal use only.
+Please consider using [Paste Image](https://marketplace.visualstudio.com/items?itemName=mushan.vscode-paste-image) instead.

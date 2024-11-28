@@ -14,17 +14,25 @@ function getDate(year: number, month: number, day: number, hour: number, min: nu
   return new Date(year, month - 1, day, hour, min, sec);
 }
 
+function createRule(pattern: string, rule: string) {
+  const p = t.patternToRegex(pattern);
+  const r = et.parseExpression(rule);
+  return {
+    pattern: p,
+    evalNode: r
+  };
+}
 
 suite('exp Test Suite', function () {
 
-  // test('download test', async function () {
-  //   this.timeout(20000);
-  //   for (const x in t.PRE_BUILD) {
-  //     const y = t.PRE_BUILD[x];
-  //     let z = await t.download(y, tmpdir.name);
-  //     assert.notEqual(z, null);
-  //   }
-  // });
+  test('download test', async function () {
+    this.timeout(20000);
+    for (const x in t.PRE_BUILD) {
+      const y = t.PRE_BUILD[x];
+      let z = await t.download(y, tmpdir.name);
+      assert.notEqual(z, null);
+    }
+  });
 
 
   test('parseSelectText', () => {
@@ -201,6 +209,7 @@ suite('exp Test Suite', function () {
       format: "webp",
       execPath: "",
       baseDirectory: et.parseExpression("/foo/bar"),
+      baseDirectories: [],
       defaultFileName: et.parseExpression("${date: YYYYMMDDHHmmss}"),
       rule: [{ pattern: t.patternToRegex("*"), evalNode: et.parseExpression("hoge") }],
       suffixLength: 2,
@@ -220,6 +229,7 @@ suite('exp Test Suite', function () {
       format: "jpeg",
       execPath: "",
       baseDirectory: et.parseExpression("/foo/bar"),
+      baseDirectories: [],
       defaultFileName: et.parseExpression("${date: YYYYMMDDHHmmss}"),
       rule: [{ pattern: t.patternToRegex("*"), evalNode: et.parseExpression("hoge") }],
       suffixLength: 3,
@@ -246,6 +256,7 @@ suite('exp Test Suite', function () {
       format: "png",
       execPath: "",
       baseDirectory: et.parseExpression("/foo/bar"),
+      baseDirectories: [],
       defaultFileName: et.parseExpression("${date: YYYYMMDDHHmmss}"),
       rule: [{ pattern: t.patternToRegex("*"), evalNode: et.parseExpression("hoge") }],
       suffixLength: 3,
@@ -253,6 +264,7 @@ suite('exp Test Suite', function () {
       saveInWorkspaceOnly: true
     }, {
       date: getDate(2024, 11, 24, 12, 16, 34),
+      editor: vscode.Uri.file("/foo/bar.txt")
     }, "h:200,?foobar", async (path: vscode.Uri) => {
       let x = path.path.split("-");
       if (x.length == 2) {
@@ -273,6 +285,7 @@ suite('exp Test Suite', function () {
       format: "png",
       execPath: "",
       baseDirectory: et.parseExpression("/foo/bar"),
+      baseDirectories: [],
       defaultFileName: et.parseExpression("${date: YYYYMMDDHHmmss}"),
       rule: [{ pattern: t.patternToRegex("*"), evalNode: et.parseExpression("hoge") }],
       suffixLength: 1,
@@ -293,6 +306,63 @@ suite('exp Test Suite', function () {
     assert.strictEqual(x.path.path, "/foo/bar/20241124121634-11.png");
     assert.strictEqual(x.max_height, 200);
     assert.strictEqual(x.max_width, undefined);
+  });
+
+
+  test("getSaveImagePath with baseDirectories 1", async () => {
+    let config = {
+      format: "jpeg" as const,
+      execPath: "",
+      baseDirectory: et.parseExpression("/foo/bar"),
+      baseDirectories: [
+        createRule("foo/*/*.md", "/y"),
+        createRule("foo/**/*.md", "/a"),
+        createRule("bar/*.txt", "/z"),
+        createRule("foo/*.txt", "${date: YYYY }"),
+        createRule("*.md", "/x"),
+      ],
+      defaultFileName: et.parseExpression("${date: YYYYMMDDHHmmss}"),
+      rule: [{ pattern: t.patternToRegex("*"), evalNode: et.parseExpression("hoge") }],
+      suffixLength: 3,
+      suffixDelimiter: "-",
+      saveInWorkspaceOnly: true
+    };
+    let x = await t.getSaveImagePath(config, {
+      date: getDate(2024, 11, 24, 12, 16, 34),
+      editor: vscode.Uri.file("/foo/bar.txt")
+    }, "", async () => { return false; });
+    assert.strictEqual(x.path.path, "2024/20241124121634.jpg");
+
+    x = await t.getSaveImagePath(config, {
+      date: getDate(2024, 11, 24, 12, 16, 34),
+      editor: vscode.Uri.file("/foo/bar.md")
+    }, "", async () => { return false; });
+    assert.strictEqual(x.path.path, "/a/20241124121634.jpg");
+
+    x = await t.getSaveImagePath(config, {
+      date: getDate(2024, 11, 24, 12, 16, 34),
+      editor: vscode.Uri.file("/piyo/bar.md")
+    }, "", async () => { return false; });
+    assert.strictEqual(x.path.path, "/x/20241124121634.jpg");
+
+    x = await t.getSaveImagePath(config, {
+      date: getDate(2024, 11, 24, 12, 16, 34),
+      editor: vscode.Uri.file("/foo/piyo/bar.md")
+    }, "", async () => { return false; });
+    assert.strictEqual(x.path.path, "/y/20241124121634.jpg");
+
+    x = await t.getSaveImagePath(config, {
+      date: getDate(2024, 11, 24, 12, 16, 34),
+      editor: vscode.Uri.file("/foo/fuga/piyo/bar.md")
+    }, "", async () => { return false; });
+    assert.strictEqual(x.path.path, "/a/20241124121634.jpg");
+
+    x = await t.getSaveImagePath(config, {
+      date: getDate(2024, 11, 24, 12, 16, 34),
+      editor: vscode.Uri.file("abc/def/bar.ts")
+    }, "", async () => { return false; });
+    assert.strictEqual(x.path.path, "/foo/bar/20241124121634.jpg");
+
   });
 
 });

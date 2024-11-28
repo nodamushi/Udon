@@ -1,8 +1,8 @@
 {
   "name": "udon",
   "displayName": "Udon🍜",
-  "description": "Udon: A simple extension to paste images effortlessly.",
-  "version": "0.1.1",
+  "description": "Paste image plugin with flexible options for insertion text and save directories. Supports resizing, remote SSH, and WSL.",
+  "version": "0.1.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/nodamushi/Udon"
@@ -77,6 +77,11 @@
           "type": "string",
           "default": "${fileDirname}/image",
           "description": "Base directory for saving images."
+        },
+        "udon.baseDirectories": {
+          "type": "array",
+          "default": [],
+          "description": "A list of rules defining the base directories for saving images, based on file patterns. Each rule is an array where the first element is a file pattern (e.g., \"*.md\") and the second element is the corresponding directory path. If no rule matches the current file, the 'udon.baseDirectory' setting will be used instead."
         },
         "udon.defaultFileName": {
           "type": "string",

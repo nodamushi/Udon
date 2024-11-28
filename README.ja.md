@@ -4,14 +4,6 @@
 
 ---
 
-## 推奨事項
-
-このプラグインは私個人のために作っただけです。
-
- [Paste Imaeg](https://marketplace.visualstudio.com/items?itemName=mushan.vscode-paste-image) の利用をご検討ください。
-
----
-
 ## 機能
 
 ![](./docs/images/udon.gif)
@@ -99,13 +91,6 @@ foobar.jpg
 - gif
 - avif
 
-### デフォルトの保存先、ファイル名の変更
-
-`udon.baseDirectory`、 `udon.defaultFileName` 設定を変えることで保存ディレクトリ、デフォルトファイル名を変更できます。
-
-
-`$image〇〇` 、 `$relImage〇〇` を使用することはできません。
-
 ### 好みの挿入ルールに変更
 
 `udon.rule` 設定を変えることでエディタに挿入されるルールを変えることができます。
@@ -121,6 +106,31 @@ foobar.jpg
 
 ![](docs/images/user_insert.gif)
 
+### デフォルトの保存先、ファイル名の変更
+
+`udon.baseDirectory`、 `udon.baseDirectories`、 `udon.defaultFileName` 設定を変えることで保存ディレクトリ、デフォルトファイル名を変更できます。
+
+注意: `$image〇〇` 、 `$relImage〇〇` を使用することはできません。
+
+####  `udon.baseDirectories`
+
+`udon.baseDirectories` は `udon.rule` と同様に、パターンマッチによって保存先ディレクトリを指定します。設定されたルールは上から順に評価され、一致したパターンが見つかれば、それに対応するディレクトリが保存先として使用されます。どのパターンにも一致しない場合は、`udon.baseDirectory` が使用されます。
+
+以下に例を示します。
+
+```json
+"udon.baseDirectories": [
+  ["foo/*.md", "${workspaceFolder}/foo/md-img"],
+  ["*.md", "${workspaceFolder}/md-img"],
+  ["*.txt", "${workspaceFolder}/txt-img"]
+]
+```
+
+- Markdownファイル（`*/foo/*.md`）を編集している場合、画像は `foo/md-img` フォルダに保存されます。
+- Markdownファイル（`*.md`）を編集している場合、画像は `md-img` フォルダに保存されます。
+- テキストファイル（`*.txt`）を編集している場合、画像は `txt-img` フォルダに保存されます。
+- どのルールにも一致しない場合は、デフォルトの `udon.baseDirectory` 設定が使用されます。
+
 ---
 
 ## 設定
@@ -129,6 +139,7 @@ foobar.jpg
 - `udon.saveInWorkspaceOnly` : ワークスペース外への保存を禁止（エラーを表示）
 - `udon.execPath` :  [climg2base64](https://github.com/nodamushi/climg2base64) の実行ファイルパス
 - `udon.baseDirectory`: 保存先ディレクトリの基準位置
+- `udon.baseDirectories`: 保存先ディレクトリの基準位置をパターンマッチで指定
 - `udon.defaultFileName`: 保存する画像のデフォルトファイル名
 - `udon.rule`: エディタに貼り付けるときの文字列テンプレート
 - `udon.suffixLength`: 重複時の連番の桁数（例: 001）。3を指定すると、001のようになる。
@@ -246,3 +257,11 @@ foobar.jpg
 ## ライセンス
 
 MIT ライセンス or Unlicense
+
+---
+
+## 推奨事項
+
+このプラグインは私個人のために作っただけです。
+
+ [Paste Imaeg](https://marketplace.visualstudio.com/items?itemName=mushan.vscode-paste-image) の利用をご検討ください。

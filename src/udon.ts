@@ -25,6 +25,7 @@ const PRE_BUILD = {
 // -------------------------------------------------------------
 const DEFAULT_IMAGE_FORMAT = "webp";
 const DEFAULT_BASE_DIRECTORY = "${fileDirname}/image";
+const DEFAULT_BASE_DIRECTORIES: string[][] = [];
 const DEFAULT_BASE_DIRECTORY_NODE = parseExpression(DEFAULT_BASE_DIRECTORY);
 const DEFAULT_BASE_FILENAME = "${fileBasenameNoExtension}-${date: YYYY-M-D}";
 const DEFAULT_BASE_FILENAME_NODE = parseExpression(DEFAULT_BASE_FILENAME);
@@ -73,6 +74,7 @@ const CONFIG_NAME = [
   'saveInWorkspaceOnly',
   'execPath',
   'baseDirectory',
+  'baseDirectories',
   'defaultFileName',
   'rule',
   'suffixLength',
@@ -103,6 +105,7 @@ interface UserConfig {
   format?: string,
   execPath?: string,
   baseDirectory?: string,
+  baseDirectories?: any,
   defaultFileName?: string,
   rule?: any,
   suffixLength?: number,
@@ -115,6 +118,7 @@ interface Config {
   format: FormatName,
   execPath: string,
   baseDirectory: EvalNode,
+  baseDirectories: Rule[],
   defaultFileName: EvalNode,
   rule: Rule[],
   suffixLength: number,
@@ -164,6 +168,7 @@ function getUserConfiguration(): UserConfig {
     format: get<string>('format', c),
     execPath: get<string>('execPath', c),
     baseDirectory: get<string>('baseDirectory', c),
+    baseDirectories: get<any>('baseDirectories', c),
     defaultFileName: get<string>('defaultFileName', c),
     rule: get<any>('rule', c),
     suffixLength: get<number>('suffixLength', c),
@@ -229,6 +234,26 @@ function getConfiguration(uc: UserConfig, throwError: boolean): Config {
       base_directory = DEFAULT_BASE_DIRECTORY_NODE;
     }
   }
+  let base_directories_any = uc.baseDirectories || [];
+  if (!Array.isArray(base_directories_any)) {
+    if (throwError) {
+      throw new ConfigError('baseDirectories', "baseDirectories is not array");
+    } else {
+      base_directories_any = DEFAULT_REPLACE_RULE;
+    }
+  } else if (base_directories_any.length === 0) {
+    base_directories_any = DEFAULT_REPLACE_RULE;
+  }
+  let base_directories: Rule[];
+  try {
+    base_directories = convertrule(base_directories_any);
+  } catch (error) {
+    if (throwError) {
+      throw error;
+    } else {
+      base_directories = convertrule(DEFAULT_BASE_DIRECTORIES);
+    }
+  }
 
   const base_filename_str = uc.defaultFileName || DEFAULT_BASE_FILENAME;
   let base_filename: EvalNode;
@@ -242,10 +267,7 @@ function getConfiguration(uc: UserConfig, throwError: boolean): Config {
     }
   }
 
-  let replace_rule_any = uc.rule;
-  if (!replace_rule_any || replace_rule_any.length == 0) {
-    replace_rule_any = DEFAULT_REPLACE_RULE;
-  }
+  let replace_rule_any = uc.rule || DEFAULT_REPLACE_RULE;
 
   if (!Array.isArray(replace_rule_any)) {
     if (throwError) {
@@ -253,6 +275,8 @@ function getConfiguration(uc: UserConfig, throwError: boolean): Config {
     } else {
       replace_rule_any = DEFAULT_REPLACE_RULE;
     }
+  } else if (replace_rule_any.length == 0) {
+    replace_rule_any = DEFAULT_REPLACE_RULE;
   }
   let replace_rule: Rule[];
   try {
@@ -269,6 +293,7 @@ function getConfiguration(uc: UserConfig, throwError: boolean): Config {
     format: format,
     execPath: exec_path,
     baseDirectory: base_directory,
+    baseDirectories: base_directories,
     defaultFileName: base_filename,
     rule: replace_rule,
     suffixLength: uc.suffixLength ?? DEFAULT_SUFFIXS_LENGTH,
@@ -399,13 +424,13 @@ function testRulePattern(pattern: RegExp, uri: vscode.Uri) {
   }
 }
 
-function getRule(rules: Rule[], uri: vscode.Uri) {
+function getRule(rules: Rule[], uri: vscode.Uri, defaultValue: EvalNode) {
   for (const r of rules) {
     if (testRulePattern(r.pattern, uri)) {
       return r.evalNode;
     }
   }
-  return DEFAULT_RULE;
+  return defaultValue;
 }
 
 async function fileExists(uri: Uri) {
@@ -502,7 +527,8 @@ async function getSaveImagePath(
   // for test
   existFile?: (path: Uri) => Promise<boolean>,
 ): Promise<SaveImageInfo> {
-  const base = evalPath(config.baseDirectory, env);
+  const node = env.editor ? getRule(config.baseDirectories, env.editor, config.baseDirectory) : config.baseDirectory;
+  const base = evalPath(node, env);
   const selected = parseSelectText(selectedText);
   const format = selected.format ?? config.format;
 
@@ -607,7 +633,7 @@ async function pastaRamen(config: Config, default_climg2base64: string, logger: 
 
   env.image = info.path;
   env.image_format = info.format;
-  const rule = getRule(config.rule, editorUri);
+  const rule = getRule(config.rule, editorUri, DEFAULT_RULE);
   const text = evalString(rule, env);
 
   let result: Result;
