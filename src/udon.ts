@@ -119,7 +119,7 @@ interface UserConfig {
   saveInWorkspaceOnly?: boolean,
 }
 
-interface Config {
+export interface Config {
   format: FormatName,
   execPath: string,
   baseDirectory: EvalNode,
@@ -269,8 +269,6 @@ function getConfiguration(uc: UserConfig, throwError: boolean, base?: Config): C
       } else {
         base_directories = base?.baseDirectories ?? convertrule(DEFAULT_BASE_DIRECTORIES);
       }
-    } else if (uc.baseDirectories.length === 0) {
-      base_directories = base?.baseDirectories ?? convertrule(DEFAULT_BASE_DIRECTORIES);
     } else {
       try {
         base_directories = convertrule(uc.baseDirectories);
@@ -309,8 +307,6 @@ function getConfiguration(uc: UserConfig, throwError: boolean, base?: Config): C
       } else {
         replace_rule = base?.rule ?? convertrule(DEFAULT_REPLACE_RULE);
       }
-    } else if (uc.rule.length === 0) {
-      replace_rule = base?.rule ?? convertrule(DEFAULT_REPLACE_RULE);
     } else {
       try {
         replace_rule = convertrule(uc.rule);

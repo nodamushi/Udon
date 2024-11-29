@@ -18,3 +18,7 @@ vsce package
 npm run test
 ```
 
+### Test environment variables
+
+- `DISABLE_DOWNLOAD_TEST=1`: Skip binary download test
+

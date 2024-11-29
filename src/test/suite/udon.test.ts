@@ -31,14 +31,17 @@ suite('exp Test Suite', function () {
     rmSync(tmpdir.name, { force: true, recursive: true });
   });
 
-  // test('download test', async function () {
-  //   this.timeout(20000);
-  //   for (const x in t.PRE_BUILD) {
-  //     const y = t.PRE_BUILD[x];
-  //     let z = await t.download(y, tmpdir.name);
-  //     assert.notEqual(z, null);
-  //   }
-  // });
+  const disabled_download_test = process.env.DISABLE_DOWNLOAD_TEST || "0";
+  if (disabled_download_test != "1") {
+    test('download test', async function () {
+      this.timeout(20000);
+      for (const x in t.PRE_BUILD) {
+        const y = t.PRE_BUILD[x];
+        let z = await t.download(y, tmpdir.name);
+        assert.notEqual(z, null);
+      }
+    });
+  }
 
 
   test("getConfiguration full", () => {
@@ -101,10 +104,9 @@ suite('exp Test Suite', function () {
     assert.equal(c.format, t.DEFAULT_IMAGE_FORMAT);
     assert.equal(c.execPath, "");
     assert.deepEqual(c.baseDirectory, t.DEFAULT_BASE_DIRECTORY_NODE);
-    assert.equal(c.baseDirectories.length, t.DEFAULT_BASE_DIRECTORIES.length);
+    assert.equal(c.baseDirectories.length, 0);
     assert.deepEqual(c.defaultFileName, t.DEFAULT_BASE_FILENAME_NODE);
-    assert.equal(c.rule.length, t.DEFAULT_REPLACE_RULE.length);
-    assert.deepEqual(c.rule[0], { pattern: /^[^/\\]*\.md$/, evalNode: et.parseExpression("![](${relImage:${fileDirname}})") });
+    assert.equal(c.rule.length, 0);
     assert.equal(c.suffixLength, t.DEFAULT_SUFFIXS_LENGTH);
     assert.equal(c.suffixDelimiter, t.DEFAULT_SUFFIXS_DELIMITER);
     assert.equal(c.saveInWorkspaceOnly, true);
@@ -155,6 +157,112 @@ suite('exp Test Suite', function () {
       assert.equal(c.suffixDelimiter, t.DEFAULT_SUFFIXS_DELIMITER);
       assert.equal(c.saveInWorkspaceOnly, true);
     }
+  });
+
+
+  test("getConfiguration merge1", () => {
+    let base: udon.Config = {
+      format: "webp",
+      execPath: "piyo",
+      baseDirectory: et.parseExpression("a"),
+      baseDirectories: [],
+      defaultFileName: et.parseExpression("b"),
+      rule: [],
+      suffixLength: 1,
+      suffixDelimiter: "-",
+      saveInWorkspaceOnly: true
+    };
+    let c = t.getConfiguration({
+      format: "png",
+      execPath: "hoge",
+      baseDirectory: "$workspaceFolder",
+      baseDirectories: [
+        ["*.md", "a"],
+        ["*.txt", "b"]
+      ],
+      defaultFileName: "${date: Y}",
+      rule: [
+        ["*.md", "xx"],
+        ["*.txt", "yy"],
+      ],
+      suffixLength: 2,
+      suffixDelimiter: "@",
+      saveInWorkspaceOnly: false,
+    }, true, base);
+
+    assert.equal(c.format, "png");
+    assert.equal(c.execPath, "hoge");
+    assert.deepEqual(c.baseDirectory, new et.VariableNode("workspaceFolder"));
+    assert.deepEqual(c.baseDirectories, [
+      { pattern: /^[^/\\]*\.md$/, evalNode: new et.TextNode("a") },
+      { pattern: /^[^/\\]*\.txt$/, evalNode: new et.TextNode("b") }
+    ]);
+    assert.deepEqual(c.defaultFileName, new et.DateNode("Y"));
+    assert.deepEqual(c.rule, [
+      { pattern: /^[^/\\]*\.md$/, evalNode: new et.TextNode("xx") },
+      { pattern: /^[^/\\]*\.txt$/, evalNode: new et.TextNode("yy") }
+    ]);
+    assert.equal(c.suffixLength, 2);
+    assert.equal(c.suffixDelimiter, "@");
+    assert.equal(c.saveInWorkspaceOnly, false);
+  });
+
+  test("getConfiguration merge2", () => {
+    let base: udon.Config = {
+      format: "webp",
+      execPath: "piyo",
+      baseDirectory: et.parseExpression("a"),
+      baseDirectories: [
+        createRule("*", "z")
+      ],
+      defaultFileName: et.parseExpression("b"),
+      rule: [],
+      suffixLength: 10,
+      suffixDelimiter: "x",
+      saveInWorkspaceOnly: false
+    };
+    let c = t.getConfiguration({}, true, base);
+
+    assert.equal(c.format, "webp");
+    assert.equal(c.execPath, "piyo");
+    assert.deepEqual(c.baseDirectory, new et.TextNode("a"));
+    assert.deepEqual(c.baseDirectories, [
+      { pattern: /.*/, evalNode: new et.TextNode("z") }
+    ]);
+    assert.deepEqual(c.defaultFileName, new et.TextNode("b"));
+    assert.deepEqual(c.rule, []);
+    assert.equal(c.suffixLength, 10);
+    assert.equal(c.suffixDelimiter, "x");
+    assert.equal(c.saveInWorkspaceOnly, false);
+  });
+
+  test("getConfiguration merge3", () => {
+    let base: udon.Config = {
+      format: "webp",
+      execPath: "piyo",
+      baseDirectory: et.parseExpression("a"),
+      baseDirectories: [
+        createRule("*", "z")
+      ],
+      defaultFileName: et.parseExpression("b"),
+      rule: [
+        createRule("z", "y")
+      ],
+      suffixLength: 10,
+      suffixDelimiter: "x",
+      saveInWorkspaceOnly: false
+    };
+    let c = t.getConfiguration({ baseDirectories: [], rule: [] }, true, base);
+
+    assert.equal(c.format, "webp");
+    assert.equal(c.execPath, "piyo");
+    assert.deepEqual(c.baseDirectory, new et.TextNode("a"));
+    assert.deepEqual(c.baseDirectories, []);
+    assert.deepEqual(c.defaultFileName, new et.TextNode("b"));
+    assert.deepEqual(c.rule, []);
+    assert.equal(c.suffixLength, 10);
+    assert.equal(c.suffixDelimiter, "x");
+    assert.equal(c.saveInWorkspaceOnly, false);
   });
 
   test('parseSelectText', () => {
@@ -486,8 +594,6 @@ suite('exp Test Suite', function () {
     assert.strictEqual(x.path.path, "/foo/bar/20241124121634.jpg");
 
   });
-
-  // TODO: getConfiguration Test
 
   test("loadUdonJsonConfig no file", async () => {
     const json_path = path.join(tmpdir.name, "udon.udon.udon.udon");
