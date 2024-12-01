@@ -142,8 +142,17 @@ foobar.jpg
 - `udon.baseDirectories`: 保存先ディレクトリの基準位置をパターンマッチで指定
 - `udon.defaultFileName`: 保存する画像のデフォルトファイル名
 - `udon.rule`: エディタに貼り付けるときの文字列テンプレート
-- `udon.suffixLength`: 重複時の連番の桁数（例: 001）。3を指定すると、001のようになる。
+- `udon.suffixLength`: 重複時の連番の桁数（例: 001）。 3 を指定すると、 001 のようになる。
 - `udon.suffixDelimiter`: 連番とファイル名を区切る文字
+
+ユーザー設定やワークスペース設定のほかに、 `.vscode/udon.json` に設定を記述できます。 また、`udon.json` はワークスペースファイル (`*.code-workspace`) があるディレクトリにも配置できます。
+
+`udon.json` の主な目的は、 Git 管理対象にすることにあります。
+`settings.json` に含まれがちなユーザー固有の環境パス(例: `udon.execPath`)を Git 管理から外しつつ、本プラグインの設定を Git 管理したい場合に `udon.json` を利用してください。
+
+設定の適用順序は、`udon.json` > ワークスペース設定 > ユーザー設定が反映されます。
+
+`udon.json` は `settings.json` と同じ記述ルールですが、 `udon.` を省略可能です。 (例: `udon.format` = `format`)
 
 ## 変数
 

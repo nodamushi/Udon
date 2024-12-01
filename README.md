@@ -145,6 +145,15 @@ Here’s an example:
 - `udon.suffixLength`: The number of digits in the numbered suffix when filenames conflict (e.g., 001). Setting this to 3 results in a suffix like 001.
 - `udon.suffixDelimiter`: The delimiter between the suffix and the file name.
 
+In addition to user settings and workspace settings, configuration can also be defined in `.vscode/udon.json`. The `udon.json` file can also be placed in the directory of a workspace file (`*.code-workspace`).
+
+The main purpose of `udon.json` is to make it Git-managed.
+If you want to exclude user-specific environment paths (e.g., `udon.execPath`) from Git management while still tracking the plugin settings in Git, use `udon.json`.
+
+The configuration priority is as follows: `udon.json` > workspace settings > user settings.
+
+`udon.json` follows the same syntax rules as `settings.json`, but you can omit the `udon.` prefix (e.g., `udon.format` becomes `format`).
+
 ## Variables
 
 Here is a list of available variables for use in `udon.baseDirectory`, `udon.defaultFileName`, and `udon.rule`.
