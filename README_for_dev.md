@@ -1,4 +1,15 @@
-# README for dev
+# README for dev (memo)
+
+- [Visual Studio Code, Publishing Extensions](https://code.visualstudio.com/api/working-with-extensions/publishing-extension)
+  - [nodamushi Orginization](https://dev.azure.com/nodamushi/): https://dev.azure.com/nodamushi/
+
+## Install Node.js
+
+```sh
+scoop install nvm
+nvm install <VERSION>
+nvm use <VERSION>
+```
 
 ## Install vsce
 
@@ -10,6 +21,12 @@ npm install -g @vscode/vsce
 
 ```sh
 vsce package
+```
+
+## Publish
+
+```sh
+vsce publish
 ```
 
 ## Run test
