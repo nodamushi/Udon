@@ -165,9 +165,25 @@ function get<T>(name: ConfigName, cfg?: vscode.WorkspaceConfiguration): T | unde
 }
 
 let __debug_assertion__ = false; // true: test only
+/**
+ * Enables or disables debugging.
+ *
+ * @param {boolean} x - A flag to enable or disable debugging.
+ *        Set to `true` to enable debugging, `false` to disable.
+ */
 function enableDebug(x: boolean) {
   __debug_assertion__ = x;
 }
+
+/**
+ * A debugging function that checks if all properties of a UserConfig object are present.
+ * Throws an error if any required property is missing.
+ * This function is used for debugging purposes only when debugging is enabled.
+ *
+ * @param {UserConfig} u - The UserConfig object to validate.
+ * @returns {UserConfig} The original UserConfig object if all properties are present.
+ * @throws {Error} If any required property is missing, an error is thrown.
+ */
 function assertFullUserConfig(u: UserConfig) {
   if (__debug_assertion__) {
     // check all config parameter
@@ -205,7 +221,7 @@ function isWin(): boolean {
   return process.platform === 'win32';
 }
 
-function convertrule(replace_rule_any: any[]) {
+function convertRule(replace_rule_any: any[]) {
   let replace_rule: Rule[] = [];
   for (const x of replace_rule_any) {
     if (!Array.isArray(x) || x.length != 2) {
@@ -232,6 +248,19 @@ function convertrule(replace_rule_any: any[]) {
   return replace_rule;
 }
 
+/**
+ * Retrieves the configuration based on the given UserConfig and base configuration.
+ * It validates and processes values from the UserConfig and applies defaults or values from the base configuration.
+ *
+ * @param {UserConfig} uc - The UserConfig object containing user-defined settings.
+ * @param {boolean} throwError - Flag indicating whether to throw an error when encountering an invalid configuration.
+ * @param {Config} [base] - An optional base configuration to fall back to if certain values are missing in the UserConfig.
+ * @returns {Config} The resulting configuration object.
+ *
+ * This function handles various configuration options, such as format, execution path, base directory,
+ * filename, rule, and suffix options. If any required field is missing or invalid, the function
+ * will either throw an error or fall back to default or base configuration values based on the throwError flag.
+ */
 function getConfiguration(uc: UserConfig, throwError: boolean, base?: Config): Config {
 
   const format: FormatName = (uc.format && FORMAT.includes(uc.format.trim() as any))
@@ -267,21 +296,21 @@ function getConfiguration(uc: UserConfig, throwError: boolean, base?: Config): C
       if (throwError) {
         throw new ConfigError('baseDirectories', "baseDirectories is not array");
       } else {
-        base_directories = base?.baseDirectories ?? convertrule(DEFAULT_BASE_DIRECTORIES);
+        base_directories = base?.baseDirectories ?? convertRule(DEFAULT_BASE_DIRECTORIES);
       }
     } else {
       try {
-        base_directories = convertrule(uc.baseDirectories);
+        base_directories = convertRule(uc.baseDirectories);
       } catch (error) {
         if (throwError) {
           throw error;
         } else {
-          base_directories = base?.baseDirectories ?? convertrule(DEFAULT_BASE_DIRECTORIES);
+          base_directories = base?.baseDirectories ?? convertRule(DEFAULT_BASE_DIRECTORIES);
         }
       }
     }
   } else {
-    base_directories = base?.baseDirectories ?? convertrule(DEFAULT_BASE_DIRECTORIES);
+    base_directories = base?.baseDirectories ?? convertRule(DEFAULT_BASE_DIRECTORIES);
   }
 
   let base_filename: EvalNode;
@@ -305,21 +334,21 @@ function getConfiguration(uc: UserConfig, throwError: boolean, base?: Config): C
       if (throwError) {
         throw new ConfigError('rule', "replace rule is not array");
       } else {
-        replace_rule = base?.rule ?? convertrule(DEFAULT_REPLACE_RULE);
+        replace_rule = base?.rule ?? convertRule(DEFAULT_REPLACE_RULE);
       }
     } else {
       try {
-        replace_rule = convertrule(uc.rule);
+        replace_rule = convertRule(uc.rule);
       } catch (error) {
         if (throwError) {
           throw error;
         } else {
-          replace_rule = base?.rule ?? convertrule(DEFAULT_REPLACE_RULE);
+          replace_rule = base?.rule ?? convertRule(DEFAULT_REPLACE_RULE);
         }
       }
     }
   } else {
-    replace_rule = base?.rule ?? convertrule(DEFAULT_REPLACE_RULE);
+    replace_rule = base?.rule ?? convertRule(DEFAULT_REPLACE_RULE);
   }
 
   const suffix_len = uc.suffixLength ?? (base?.suffixLength ?? DEFAULT_SUFFIXS_LENGTH);
@@ -344,9 +373,9 @@ function getUdonJsonConfigPaths(editor?: vscode.Uri | null) {
   let paths: Uri[] = [];
   const wf = vscode.workspace.workspaceFolders;
   if (editor) {
-    const ws = vscode.workspace.getWorkspaceFolder(editor);
-    if (ws) {
-      paths.push(joinUri(ws.uri, ".vscode", PLUGIN_CONFIG_FILE));
+    const { workspace } = getUriAndWorkspace(editor);
+    if (workspace) {
+      paths.push(joinUri(workspace.uri, ".vscode", PLUGIN_CONFIG_FILE));
     } else if (wf && wf.length === 1) {
       paths.push(joinUri(wf[0].uri, ".vscode", PLUGIN_CONFIG_FILE));
     }
@@ -443,6 +472,9 @@ interface Logger {
   log(message: string): void;
 };
 
+/**
+ * Udon extension object
+ */
 export class Udon implements Logger {
   context: vscode.ExtensionContext;
   config: Config;
@@ -481,13 +513,23 @@ export class Udon implements Logger {
     this.channel.dispose();
   }
 
+  /**
+   * default climg2base64 path
+   */
   get_default_bin_path() {
     return defualt_climg2base64_path(this.context.extensionPath);
   }
+
+  /**
+   * default climg2base64 directory
+   */
   get_default_bin_dir() {
     return defualt_climg2base64_dir(this.context.extensionPath);
   }
 
+  /**
+   * paste image
+   */
   async pasteUdon() {
     let c = this.config;
     let list = getUdonJsonConfigPaths(vscode.window.activeTextEditor?.document.uri);
@@ -507,6 +549,9 @@ export class Udon implements Logger {
     await pastaRamen(c, this.get_default_bin_path(), this);
   }
 
+  /**
+   * download pre-build climg2base64
+   */
   async download_pre_build(show_err_msg: boolean) {
     const x = get_download_url();
     if (!x) {
@@ -534,6 +579,9 @@ export class Udon implements Logger {
     }
   }
 
+  /**
+   * download pre-build climg2base64
+   */
   async auto_download_pre_build() {
     if (!this.config.execPath) {
       const p = this.get_default_bin_path();
@@ -553,7 +601,71 @@ export class Udon implements Logger {
   }
 }
 
+/**
+ * Removes the query and fragment parts from the given Uri.
+ *
+ * @param {Uri} uri - The Uri from which the query and fragment will be removed.
+ * @returns {Uri} A new Uri without the query and fragment.
+ */
+function removeQueryAndFragment(uri: Uri) {
+  return vscode.Uri.from({
+    scheme: uri.scheme,
+    authority: uri.authority,
+    path: uri.path,
+  });
+}
 
+/**
+ * Returns a new Uri with the specified scheme, keeping the original authority and path.
+ *
+ * @param {Uri} uri - The original Uri to modify.
+ * @param {string} scheme - The new scheme to set for the Uri.
+ * @returns {Uri} A new Uri with the updated scheme.
+ */
+function newSchemeUri(uri: Uri, scheme: string) {
+  return vscode.Uri.from({
+    scheme,
+    authority: uri.authority,
+    path: uri.path,
+  });
+}
+
+/**
+ * Returns the Uri and its corresponding workspace if available.
+ *
+ * @param {Uri} originalUri - The original Uri to check.
+ * @returns {Object} An object containing the Uri and the workspace, if found.
+ *
+ * The function checks if the Uri belongs to a workspace and returns the workspace.
+ * If the Uri's scheme is not "file" or "vscode-remote", it will try to change the scheme
+ * and check again for a workspace.
+ */
+function getUriAndWorkspace(originalUri: Uri) {
+  let uri = originalUri;
+  let workspace = vscode.workspace.getWorkspaceFolder(uri);
+  if (workspace) { return { uri, workspace }; }
+
+  if (uri.scheme !== "file" && uri.scheme !== "vscode-remote") {
+    uri = newSchemeUri(uri, "file");
+    workspace = vscode.workspace.getWorkspaceFolder(uri);
+    if (workspace) { return { uri, workspace }; }
+
+    uri = newSchemeUri(uri, "vscode-remote");
+    workspace = vscode.workspace.getWorkspaceFolder(uri);
+    if (workspace) { return { uri, workspace }; }
+  }
+
+  return { uri: originalUri, workspace };
+}
+
+/**
+ * Tests if the given Uri matches the provided regular expression pattern
+ * by checking the current directory and its parent directories.
+ *
+ * @param {RegExp} pattern - The regular expression pattern to test.
+ * @param {vscode.Uri} uri - The Uri to check.
+ * @returns {boolean} True if the pattern matches the Uri, otherwise false.
+ */
 function testRulePattern(pattern: RegExp, uri: vscode.Uri) {
   let current = basenameOfUri(uri);
   let dir = parentOfUri(uri);
@@ -571,6 +683,15 @@ function testRulePattern(pattern: RegExp, uri: vscode.Uri) {
   }
 }
 
+/**
+ * Retrieves the EvalNode associated with the first rule that matches
+ * the given Uri based on its pattern. If no rule matches, returns the default value.
+ *
+ * @param {Rule[]} rules - The array of rules to check.
+ * @param {vscode.Uri} uri - The Uri to test against the rules.
+ * @param {EvalNode} defaultValue - The default value to return if no rule matches.
+ * @returns {EvalNode} The EvalNode of the matching rule or the default value.
+ */
 function getRule(rules: Rule[], uri: vscode.Uri, defaultValue: EvalNode) {
   for (const r of rules) {
     if (testRulePattern(r.pattern, uri)) {
@@ -580,6 +701,12 @@ function getRule(rules: Rule[], uri: vscode.Uri, defaultValue: EvalNode) {
   return defaultValue;
 }
 
+/**
+ * Checks if the file at the given Uri exists in the workspace.
+ *
+ * @param {Uri} uri - The Uri of the file to check.
+ * @returns {Promise<boolean>} A promise that resolves to true if the file exists, otherwise false.
+ */
 async function fileExists(uri: Uri) {
   try {
     await vscode.workspace.fs.stat(uri);
@@ -589,10 +716,26 @@ async function fileExists(uri: Uri) {
   }
 }
 
+/**
+ * Pads the number with leading zeros to ensure it has a specified length.
+ *
+ * @param {number} i - The number to pad.
+ * @param {number} n - The desired length of the resulting string.
+ * @returns {string} A string representation of the number with leading zeros.
+ */
 function zeroFill(i: number, n: number): string {
   return i.toString().padStart(n, '0');
 }
 
+/**
+ * Represents the information required to save an image.
+ *
+ * @interface SaveImageInfo
+ * @property {Uri} path - The path where the image will be saved.
+ * @property {number} [max_width] - The maximum width of the image (optional).
+ * @property {number} [max_height] - The maximum height of the image (optional).
+ * @property {FormatName} format - The format of the image (e.g., jpeg, png).
+ */
 interface SaveImageInfo {
   path: Uri,
   max_width?: number,
@@ -602,6 +745,16 @@ interface SaveImageInfo {
 const NEWLINE_TEXT = /[\r\n]/g;
 const REMOVE_TEXT = /[[\r\n\t\\\]*?"<>|&%]/g;
 
+/**
+ * Represents the result of parsing a select operation for an image.
+ *
+ * @interface ParseSelectResult
+ * @property {string} [name] - The name of the image (optional). If provided, it may be used as the file name.
+ * @property {number} [max_width] - The maximum width of the image (optional).
+ * @property {number} [max_height] - The maximum height of the image (optional).
+ * @property {FormatName} [format] - The format of the image (e.g., jpeg, png) (optional).
+ * @property {boolean} [overwrite] - Indicates whether to overwrite an existing image when saving (optional).
+ */
 interface ParseSelectResult {
   name?: string;
   max_width?: number;
@@ -609,7 +762,6 @@ interface ParseSelectResult {
   format?: FormatName;
   overwrite?: boolean;
 };
-
 /**
  * parse "[image file name][,w=WIDTH][,h=HEIGHT]"
  */
@@ -675,7 +827,7 @@ async function getSaveImagePath(
   existFile?: (path: Uri) => Promise<boolean>,
 ): Promise<SaveImageInfo> {
   const node = env.editor ? getRule(config.baseDirectories, env.editor, config.baseDirectory) : config.baseDirectory;
-  const base = evalPath(node, env);
+  const base = removeQueryAndFragment(evalPath(node, env));
   const selected = parseSelectText(selectedText);
   const format = selected.format ?? config.format;
 
@@ -713,7 +865,6 @@ async function getSaveImagePath(
   };
 }
 
-
 async function pastaRamen(config: Config, default_climg2base64: string, logger: Logger) {
   let editor = vscode.window.activeTextEditor;
   if (!editor) {
@@ -721,11 +872,12 @@ async function pastaRamen(config: Config, default_climg2base64: string, logger: 
     vscode.window.showErrorMessage("An active text editor NOT found.");
     return;
   }
-  const editorUri = editor.document.uri;
-  let workspace = vscode.workspace.getWorkspaceFolder(editorUri);
-  if (!workspace && vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length != 0) {
+
+  let { uri: editorUri, workspace } = getUriAndWorkspace(editor.document.uri);
+  if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length != 0) {
     workspace = vscode.workspace.workspaceFolders[0];
   }
+
   let workspaceUri = workspace?.uri;
   const selection: vscode.Selection = editor.selection;
   const selectText = editor.document.getText(selection).trim();
@@ -742,7 +894,8 @@ async function pastaRamen(config: Config, default_climg2base64: string, logger: 
   let info = await getSaveImagePath(config, env, selectText);
   logger.log(`[INFO] Image save path: ${info.path}, ${info.format}, w:${info.max_width ?? 0}, h:${info.max_height ?? 0}`);
   if (config.saveInWorkspaceOnly) {
-    if (!vscode.workspace.getWorkspaceFolder(info.path)) {
+    const { workspace: w } = getUriAndWorkspace(info.path);
+    if (!w) {
       logger.log(`[ERROR] Attempted to save a file outside the workspace: ${info.path}`);
       vscode.window.showErrorMessage("Cannot save outside the workspace." + info.path.path);
       return;

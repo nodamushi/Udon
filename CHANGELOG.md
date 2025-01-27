@@ -4,6 +4,11 @@ All notable changes to the "udon" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [v0.1.3] - 2025/01/27
+
+- fix: [#2](https://github.com/nodamushi/Udon/issues/2)
+- Add `*.ipynb` config
+
 ## [v0.1.2] - 2024/12/2
 
 - Add base save directory pattern rule (`udon.baseDirectory`)
