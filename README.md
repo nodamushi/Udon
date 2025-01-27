@@ -239,6 +239,7 @@ The following variables do not take any arguments. Their naming conventions foll
 - Ascii Dock
 - HTML
 - Doxygen (C++)
+- Jupyter Notebook(.ipynb)
 
 ```json
 [
@@ -248,6 +249,7 @@ The following variables do not take any arguments. Their naming conventions foll
   ["*.html", "<img src=\"${relImage:${fileDirname}}\">"],
   ["*.cpp", "@image html ${relImage:${workspaceFolder}}"],
   ["*.hpp", "@image html ${relImage:${workspaceFolder}}"],
+  ["*.ipynb", "![](${relImage:${fileDirname}})"],
   ["*", "${relImage:${workspaceFolder}}"]
 ]
 ```

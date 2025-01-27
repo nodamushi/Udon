@@ -240,6 +240,7 @@ foobar.jpg
 - Ascii Dock
 - HTML
 - Doxygen (C++)
+- Jupyter Notebook(.ipynb)
 
 ```json
 [
@@ -249,6 +250,7 @@ foobar.jpg
   ["*.html", "<img src=\"${relImage:${fileDirname}}\">"],
   ["*.cpp", "@image html ${relImage:${workspaceFolder}}"],
   ["*.hpp", "@image html ${relImage:${workspaceFolder}}"],
+  ["*.ipynb", "![](${relImage:${fileDirname}})"],
   ["*", "${relImage:${workspaceFolder}}"]
 ]
 ```
