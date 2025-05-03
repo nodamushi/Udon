@@ -12,12 +12,12 @@ import * as tar from 'tar';
 import * as unzipper from 'unzipper';
 
 // -------------------------------------------------------------
-// v0.1.0
+// v0.1.1
 // -------------------------------------------------------------
 const PRE_BUILD = {
-  "linux-arm64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.0/climg2base64-linux-aarch64.tar.gz", "climg2base64", "a6fcd37a1dcd891c2a1b065a2079fa31"],
-  "linux-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.0/climg2base64-linux-x86_64.tar.gz", "climg2base64", "f322ff62a50edc7eec2144736e824e64"],
-  "win32-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.0/climg2base64-windows-x86_64.zip", "climg2base64.exe", "225aec2ef55edffd429255ce2c6c3cb8"],
+  "linux-arm64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.1/climg2base64-linux-aarch64.tar.gz", "climg2base64", "795ae748de520521ee77602f374766d0"],
+  "linux-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.1/climg2base64-linux-x86_64.tar.gz", "climg2base64", "1c0bfb24153d478cdf587e6306d1cc49"],
+  "win32-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.1/climg2base64-windows-x86_64.zip", "climg2base64.exe", "dcadc52312a9772c24d5fb5a91620e41"],
 } as Record<string, [string, string, string]>;
 
 // -------------------------------------------------------------

@@ -4,6 +4,11 @@ All notable changes to the "udon" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [v0.1.4] - 2025/05/03
+
+- fix: [#4](https://github.com/nodamushi/Udon/issues/4). Transparency issue with copied images in Firefox
+    - On Windows, if the PNG format is registerd in the clipboard, it is now used.
+
 ## [v0.1.3] - 2025/01/27
 
 - fix: [#2](https://github.com/nodamushi/Udon/issues/2)
