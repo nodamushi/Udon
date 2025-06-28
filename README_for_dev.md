@@ -25,6 +25,12 @@ vsce package
 
 ## Publish
 
+login
+
+```sh
+vsce login nodamushi
+```
+
 ```sh
 vsce publish
 ```
