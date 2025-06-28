@@ -9,15 +9,15 @@ import * as zlib from 'zlib';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 import * as tar from 'tar';
-import * as unzipper from 'unzipper';
+import safeRegex from 'safe-regex2';
 
 // -------------------------------------------------------------
 // v0.1.1
 // -------------------------------------------------------------
 const PRE_BUILD = {
-  "linux-arm64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.1/climg2base64-linux-aarch64.tar.gz", "climg2base64", "795ae748de520521ee77602f374766d0"],
-  "linux-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.1/climg2base64-linux-x86_64.tar.gz", "climg2base64", "1c0bfb24153d478cdf587e6306d1cc49"],
-  "win32-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.1/climg2base64-windows-x86_64.zip", "climg2base64.exe", "dcadc52312a9772c24d5fb5a91620e41"],
+  "linux-arm64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.1/climg2base64-linux-aarch64.tar.gz", "climg2base64", "fadac70cc8de5983cbd4f2d2dbb14a0b1fceb18169c64ca32c7be2e7b193e550"],
+  "linux-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.1/climg2base64-linux-x86_64.tar.gz", "climg2base64", "6d6d1efb437023747e8dd5e2ded9cfce9af6913390e0a1622c0a9631dada3162"],
+  "win32-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.1/climg2base64-windows-x86_64.tar.gz", "climg2base64.exe", "c704011ef7d5a5a6164e23e0d1088914c02b97557e467f0f83cfad7890505445"],
 } as Record<string, [string, string, string]>;
 
 // -------------------------------------------------------------
@@ -140,21 +140,59 @@ function patternToRegex(pattern: string) {
   if (pattern === "*" || pattern === "**") {
     return /.*/;
   }
-  if (!/^[\w\*\.\-/]+$/.test(pattern)) {
-    throw new Error("Invalid pattern:" + pattern + ": Only alphanumeric, '*', '**', '.', '/', and '-' are allowed.");
+  if (!/^[\w \[\]\(\)\*\.\-/\+\{\}\^\$]+$/.test(pattern)) {
+    throw new Error("Invalid pattern:" + pattern + ": Only alphanumeric and valid path characters are allowed.");
+  }
+  if (/\*\*\*/.test(pattern)) {
+    throw new Error("Invalid pattern:" + pattern + ": contains ***");
   }
 
-  let p = pattern
-    .replace(/\./g, "\\.")
-    .replace(/^\*\*\//, "") // remove top **/
-    .replace(/\/\*\*\//g, "<<{<;aster2;>}>>") // /**/
-    .replace(/\*/g, "<<{<;aster1;>}>>")   // *
-    .replace(/<<{<;aster2;>}>>/g, "/.*")
-    .replace(/<<{<;aster1;>}>>/g, "[^/\\\\]*");
+  let result = "^";
+  let i = 0;
 
-  return new RegExp("^" + p + "$");
+  if (pattern.startsWith("**/")) {
+    i = 3;
+  }
+  const isSpecialChar = (c: string) => c === '.' || c === '[' || c === ']' ||
+    c === '(' || c === ')' || c === '+' ||
+    c === '{' || c === '}' || c === '^' ||
+    c === '$';
+  const isWildDir = (i: number) => i <= pattern.length - 4 && pattern.substring(i, i + 4) === "/**/";
+
+  while (i < pattern.length) {
+    let c = pattern[i];
+    if (isWildDir(i)) {
+      result += "/.*";
+      i += 4;
+    } else if (c === '*') {
+      result += "[^/\\\\]*";
+      i++;
+    } else if (isSpecialChar(c)) {
+      result += "\\" + c;
+      i++;
+    } else {
+      let start = i;
+      i++;
+
+      if (i < pattern.length) {
+        c = pattern[i];
+        while (c !== '*' && !isSpecialChar(c) && !isWildDir(i)) {
+          i++;
+          if (i == pattern.length) break;
+          c = pattern[i];
+        }
+      }
+      result += pattern.substring(start, i);
+    }
+  }
+
+  result += "$";
+
+  if (!safeRegex(result)) {
+    throw new Error("Invalid pattern:" + pattern + " is not safe pattern.");
+  }
+  return new RegExp(result);
 }
-
 
 /**
  * Wrapper function that is only for type checking.
@@ -983,9 +1021,9 @@ async function pastaRamen(config: Config, default_climg2base64: string, logger: 
 //-------------------------------------------------------
 
 
-function md5sum(path: string): Promise<string> {
+function sha256sum(path: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const hash = crypto.createHash('md5');
+    const hash = crypto.createHash('sha256');
     fs.createReadStream(path)
       .on('data', (chunk) => hash.update(chunk))
       .on('end', () => resolve(hash.digest('hex')))
@@ -1042,7 +1080,7 @@ function download_url(url: string, save_path: string, maxRedirects: number = 5) 
       file
         .on('finish', () => {
           file.close();
-          md5sum(save_path).then(resolve).catch(reject);
+          sha256sum(save_path).then(resolve).catch(reject);
         })
         .on("error", (err) => {
           file.close();
@@ -1056,16 +1094,10 @@ function download_url(url: string, save_path: string, maxRedirects: number = 5) 
 }
 
 async function unpack(file: string, outdir: string) {
-  if (file.endsWith(".tar.gz")) {
-    await tar.x({
-      file: file,
-      cwd: outdir
-    });
-  } else if (file.endsWith('.zip')) {
-    await fs.createReadStream(file)
-      .pipe(unzipper.Extract({ path: outdir }))
-      .promise();
-  }
+  await tar.x({
+    file: file,
+    cwd: outdir
+  });
 }
 
 function deleteFile(path: string) {
@@ -1112,8 +1144,13 @@ function getExtname(url: vscode.Uri) {
   }
 }
 
+/**
+ * download climg2base64 binary from GitHub, and unpack (tar.gz).
+ * - `url_contents`: PRE_BUILD[x]
+ * - `save_dir`: output directory
+ */
 async function download(url_contents: [string, string, string], save_dir: string) {
-  const [url, contents, md5] = url_contents;
+  const [url, contents, sha256] = url_contents;
   let u = vscode.Uri.parse(url);
   const ext = getExtname(u);
   const tmp_name = "tmp" + ext;
@@ -1122,9 +1159,9 @@ async function download(url_contents: [string, string, string], save_dir: string
     await mkdir(save_dir);
   }
 
-  const download_md5 = await download_url(url, tmp_path);
-  if (download_md5 !== md5) {
-    throw new Error(`${url} MD5 Error: ${md5} != ${download_md5}`);
+  const download_sha256 = await download_url(url, tmp_path);
+  if (download_sha256 !== sha256) {
+    throw new Error(`${url} SHA256 Error: ${sha256} != ${download_sha256}`);
   }
   await unpack(tmp_path, save_dir);
   await deleteFile(tmp_path);

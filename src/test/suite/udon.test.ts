@@ -43,6 +43,10 @@ suite('exp Test Suite', function () {
     });
   }
 
+  test("Invalid Pattern", () => {
+    assert.throws(() => t.patternToRegex("***"));
+  });
+
 
   test("getConfiguration full", () => {
     let c = t.getConfiguration({

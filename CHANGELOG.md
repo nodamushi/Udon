@@ -4,6 +4,14 @@ All notable changes to the "udon" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [v0.1.5] - 2025/06/28
+
+- Security update
+    - Remove unzipper
+    - File check: MD5 -> SHA256
+    - Use safe-regex2 to check dyamic regex pattern.
+    - Accept pattern ' []{}()'
+
 ## [v0.1.4] - 2025/05/03
 
 - fix: [#4](https://github.com/nodamushi/Udon/issues/4). Transparency issue with copied images in Firefox

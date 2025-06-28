@@ -2,7 +2,7 @@
   "name": "udon",
   "displayName": "Udon🍜",
   "description": "Paste image plugin with flexible options for insertion text and save directories. Supports resizing, remote SSH, and WSL.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "repository": {
     "type": "git",
     "url": "https://github.com/nodamushi/Udon"
@@ -152,7 +152,6 @@
     "@types/node": "16.x",
     "@types/tar": "^6.1.13",
     "@types/tmp": "^0.2.6",
-    "@types/unzipper": "^0.10.10",
     "@types/vscode": "^1.94.0",
     "@typescript-eslint/eslint-plugin": "^6.4.1",
     "@typescript-eslint/parser": "^6.4.1",
@@ -164,8 +163,8 @@
     "typescript": "^5.1.6"
   },
   "dependencies": {
+    "safe-regex2": "^5.0.0",
     "tar": "^6.2.1",
-    "unzipper": "^0.12.3",
     "vscode-uri": "^3.0.8"
   }
 }
