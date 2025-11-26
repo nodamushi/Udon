@@ -12,12 +12,12 @@ import * as tar from 'tar';
 import safeRegex from 'safe-regex2';
 
 // -------------------------------------------------------------
-// v0.1.1
+// v0.2.0
 // -------------------------------------------------------------
 const PRE_BUILD = {
-  "linux-arm64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.1/climg2base64-linux-aarch64.tar.gz", "climg2base64", "fadac70cc8de5983cbd4f2d2dbb14a0b1fceb18169c64ca32c7be2e7b193e550"],
-  "linux-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.1/climg2base64-linux-x86_64.tar.gz", "climg2base64", "6d6d1efb437023747e8dd5e2ded9cfce9af6913390e0a1622c0a9631dada3162"],
-  "win32-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.1.1/climg2base64-windows-x86_64.tar.gz", "climg2base64.exe", "c704011ef7d5a5a6164e23e0d1088914c02b97557e467f0f83cfad7890505445"],
+  "linux-arm64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.2.0/climg2base64-linux-aarch64.tar.gz", "climg2base64", "84e8beab5d0c308918ce0ed7c1d3dcfff97b7e7d9fafe0e5a17eeeedf4cbada4"],
+  "linux-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.2.0/climg2base64-linux-x86_64.tar.gz", "climg2base64", "a33d91aef5015828d2b737118d04b7efe0bc86e6eec3944e1d80307362293df9"],
+  "win32-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.2.0/climg2base64-windows-x86_64.tar.gz", "climg2base64.exe", "43de67c2ecbb03431f7e4ccc164d351ff7959dd931af84cce8d9c913b33b90b2"],
 } as Record<string, [string, string, string]>;
 
 // -------------------------------------------------------------
@@ -195,10 +195,14 @@ function patternToRegex(pattern: string) {
 }
 
 /**
- * Wrapper function that is only for type checking.
+ * get config value
  */
-function get<T>(name: ConfigName, cfg?: vscode.WorkspaceConfiguration): T | undefined {
-  const udon = cfg ?? vscode.workspace.getConfiguration('udon');
+function get<T>(name: ConfigName, udon: vscode.WorkspaceConfiguration, ignoreWorkspaceConfig: boolean): T | undefined {
+  if (ignoreWorkspaceConfig) {
+    const value = udon.inspect(name);
+    const x = value?.globalValue ?? value?.defaultValue;
+    return x as T;
+  }
   return udon.get<T>(name);
 }
 
@@ -240,15 +244,15 @@ function assertFullUserConfig(u: UserConfig) {
 function getUserConfiguration(): UserConfig {
   const c = vscode.workspace.getConfiguration('udon');
   return assertFullUserConfig({
-    format: get<string>('format', c),
-    execPath: get<string>('execPath', c),
-    baseDirectory: get<string>('baseDirectory', c),
-    baseDirectories: get<any>('baseDirectories', c),
-    defaultFileName: get<string>('defaultFileName', c),
-    rule: get<any>('rule', c),
-    suffixLength: get<number>('suffixLength', c),
-    suffixDelimiter: get<string>('suffixDelimiter', c),
-    saveInWorkspaceOnly: get<boolean>('saveInWorkspaceOnly', c),
+    format: get<string>('format', c, false),
+    execPath: get<string>('execPath', c, true),
+    baseDirectory: get<string>('baseDirectory', c, false),
+    baseDirectories: get<any>('baseDirectories', c, false),
+    defaultFileName: get<string>('defaultFileName', c, false),
+    rule: get<any>('rule', c, false),
+    suffixLength: get<number>('suffixLength', c, false),
+    suffixDelimiter: get<string>('suffixDelimiter', c, false),
+    saveInWorkspaceOnly: get<boolean>('saveInWorkspaceOnly', c, false),
   });
 }
 
@@ -307,6 +311,7 @@ function getConfiguration(uc: UserConfig, throwError: boolean, base?: Config): C
 
   const exec_path: string = uc.execPath ? uc.execPath.trim() :
     (base?.execPath ?? "");
+    console.log(exec_path);
 
   let base_directory: EvalNode;
   if (uc.baseDirectory) {
@@ -487,6 +492,11 @@ async function loadUdonJsonConfigs(uri: vscode.Uri[]): Promise<UserConfig | null
     }
 
     for (const n of CONFIG_NAME) {
+      // ignore execPath of udon.json
+      if (n === 'execPath') {
+        continue;
+      }
+
       if (n in result) {
         count += 1;
       } else if (c[n] !== undefined) {
@@ -527,7 +537,6 @@ export class Udon implements Logger {
       this.log(`[ERROR] Config: ${err}`)
       vscode.window.showErrorMessage(`Udon🍜 configuration error: ${err}`)
     }
-    this.config = getConfiguration(getUserConfiguration(), true);
     this.channel = vscode.window.createOutputChannel("udon🍜");
     this.channel.appendLine(`Extension Path: ${ctx.extension.extensionPath}`);
     ctx.subscriptions.push(

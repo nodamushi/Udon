@@ -4,6 +4,13 @@ All notable changes to the "udon" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [v0.1.6] - 2025/11/27
+
+- update climg2base64
+    - fix : https://github.com/nodamushi/climg2base64/issues/3
+- Disable `execPath` workspace/udon.json config
+
+
 ## [v0.1.5] - 2025/06/28
 
 - Security update
