@@ -2,7 +2,7 @@
   "name": "udon",
   "displayName": "Udon🍜",
   "description": "Paste image plugin with flexible options for insertion text and save directories. Supports resizing, remote SSH, and WSL.",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/nodamushi/Udon"
@@ -152,27 +152,26 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
+    "lint": "eslint src",
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.1",
-    "@types/node": "16.x",
-    "@types/tar": "^6.1.13",
+    "@types/node": "^22",
     "@types/tmp": "^0.2.6",
     "@types/vscode": "^1.94.0",
-    "@typescript-eslint/eslint-plugin": "^6.4.1",
-    "@typescript-eslint/parser": "^6.4.1",
+    "@typescript-eslint/eslint-plugin": "^8.57.0",
+    "@typescript-eslint/parser": "^8.57.0",
     "@vscode/test-electron": "^2.3.4",
-    "eslint": "^8.47.0",
+    "eslint": "^9.39.4",
     "glob": "^10.3.3",
     "mocha": "^10.2.0",
     "tmp": "^0.2.3",
     "typescript": "^5.1.6"
   },
   "dependencies": {
-    "safe-regex2": "^5.0.0",
-    "tar": "^6.2.1",
+    "safe-regex2": "^5.1.0",
+    "tar": "^7",
     "vscode-uri": "^3.0.8"
   }
 }
