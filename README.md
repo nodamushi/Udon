@@ -24,11 +24,12 @@ This plugin uses [climg2base64](https://github.com/nodamushi/climg2base64) for s
 
 When the plugin starts, it automatically downloads pre-built binaries for the following supported environments:
 
-- Windows (x86_64)
+- Windows (x86_64, aarch64)
 - Linux (x86_64, aarch64)
+- macOS (aarch64)
 
 > [!IMPORTANT]
-> Binaries are only provided for environments I can personally use and verify. Support for building binaries for other environments is not available.
+> Binaries are built via GitHub Actions. Support for building binaries for other environments is not available.
 
 If your environment is not supported, please build `climg2base64` yourself and set its path to `udon.execPath`.
 

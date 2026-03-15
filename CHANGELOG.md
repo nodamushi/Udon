@@ -4,6 +4,13 @@ All notable changes to the "udon" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## [v0.1.7] - 2026/03/15
+
+- Add support for Windows (arm64) and macOS (arm64)
+- Update climg2base64 to v0.3.0
+    - Fix: clipboard initialization failure now correctly reports exit code 4 instead of 3
+- Library updates (ESLint v9, @typescript-eslint v8, etc.)
+
 ## [v0.1.6] - 2025/11/27
 
 - update climg2base64

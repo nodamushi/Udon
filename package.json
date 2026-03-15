@@ -2,7 +2,7 @@
   "name": "udon",
   "displayName": "Udon🍜",
   "description": "Paste image plugin with flexible options for insertion text and save directories. Supports resizing, remote SSH, and WSL.",
-  "version": "0.2.0",
+  "version": "0.1.7",
   "repository": {
     "type": "git",
     "url": "https://github.com/nodamushi/Udon"
