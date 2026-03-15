@@ -12,7 +12,7 @@ import * as tar from 'tar';
 import safeRegex from 'safe-regex2';
 
 // -------------------------------------------------------------
-// v0.2.0
+// v0.3.0
 // -------------------------------------------------------------
 const PRE_BUILD = {
   "linux-arm64":  ["https://github.com/nodamushi/climg2base64/releases/download/v0.3.0/climg2base64-linux-aarch64.tar.gz",   "climg2base64",     "b0e499ebb735bdbc4200eadaa4979f95be959329f31f1605e8a743d460e47a94"],
