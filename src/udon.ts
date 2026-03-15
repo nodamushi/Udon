@@ -15,9 +15,11 @@ import safeRegex from 'safe-regex2';
 // v0.2.0
 // -------------------------------------------------------------
 const PRE_BUILD = {
-  "linux-arm64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.2.0/climg2base64-linux-aarch64.tar.gz", "climg2base64", "84e8beab5d0c308918ce0ed7c1d3dcfff97b7e7d9fafe0e5a17eeeedf4cbada4"],
-  "linux-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.2.0/climg2base64-linux-x86_64.tar.gz", "climg2base64", "a33d91aef5015828d2b737118d04b7efe0bc86e6eec3944e1d80307362293df9"],
-  "win32-x64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.2.0/climg2base64-windows-x86_64.tar.gz", "climg2base64.exe", "43de67c2ecbb03431f7e4ccc164d351ff7959dd931af84cce8d9c913b33b90b2"],
+  "linux-arm64":  ["https://github.com/nodamushi/climg2base64/releases/download/v0.3.0/climg2base64-linux-aarch64.tar.gz",   "climg2base64",     "b0e499ebb735bdbc4200eadaa4979f95be959329f31f1605e8a743d460e47a94"],
+  "linux-x64":    ["https://github.com/nodamushi/climg2base64/releases/download/v0.3.0/climg2base64-linux-x86_64.tar.gz",    "climg2base64",     "ce4d6b3422994b862784c5f066f80f15c16e02d35da09c0398a4a1bea8afdcb5"],
+  "win32-x64":    ["https://github.com/nodamushi/climg2base64/releases/download/v0.3.0/climg2base64-windows-x86_64.tar.gz",  "climg2base64.exe", "7f10b7e3e354fabc641bcf95e56e39d7082b592c08f468fa06e7bfef7734be1d"],
+  "win32-arm64":  ["https://github.com/nodamushi/climg2base64/releases/download/v0.3.0/climg2base64-windows-aarch64.tar.gz", "climg2base64.exe", "6420ee0ae39106982c7224f3b9cd7364cf1bb08833d8403e08b172656866e28d"],
+  "darwin-arm64": ["https://github.com/nodamushi/climg2base64/releases/download/v0.3.0/climg2base64-macos-aarch64.tar.gz",   "climg2base64",     "109946eb2e9327d5665e565a7d0525c6711fed113cce9345756c5ed2a72e5d1b"],
 } as Record<string, [string, string, string]>;
 
 // -------------------------------------------------------------
@@ -178,7 +180,7 @@ function patternToRegex(pattern: string) {
         c = pattern[i];
         while (c !== '*' && !isSpecialChar(c) && !isWildDir(i)) {
           i++;
-          if (i == pattern.length) break;
+          if (i === pattern.length) { break; }
           c = pattern[i];
         }
       }
@@ -206,7 +208,7 @@ function get<T>(name: ConfigName, udon: vscode.WorkspaceConfiguration, ignoreWor
   return udon.get<T>(name);
 }
 
-let __debug_assertion__ = false; // true: test only
+let DEBUG_ASSERTION = false; // true: test only
 /**
  * Enables or disables debugging.
  *
@@ -214,7 +216,7 @@ let __debug_assertion__ = false; // true: test only
  *        Set to `true` to enable debugging, `false` to disable.
  */
 function enableDebug(x: boolean) {
-  __debug_assertion__ = x;
+  DEBUG_ASSERTION = x;
 }
 
 /**
@@ -227,11 +229,11 @@ function enableDebug(x: boolean) {
  * @throws {Error} If any required property is missing, an error is thrown.
  */
 function assertFullUserConfig(u: UserConfig) {
-  if (__debug_assertion__) {
+  if (DEBUG_ASSERTION) {
     // check all config parameter
     for (const c of CONFIG_NAME) {
       if (!(c in u)) {
-        throw Error(`Fatal Error: ${c} is not implemented`)
+        throw Error(`Fatal Error: ${c} is not implemented`);
       }
     }
   }
@@ -263,10 +265,10 @@ function isWin(): boolean {
   return process.platform === 'win32';
 }
 
-function convertRule(replace_rule_any: any[]) {
-  let replace_rule: Rule[] = [];
-  for (const x of replace_rule_any) {
-    if (!Array.isArray(x) || x.length != 2) {
+function convertRule(replaceRuleAny: any[]) {
+  let replaceRule: Rule[] = [];
+  for (const x of replaceRuleAny) {
+    if (!Array.isArray(x) || x.length !== 2) {
       throw new ConfigError('rule', "invalid replace rule:  [pattern, rule]");
     }
 
@@ -279,7 +281,7 @@ function convertRule(replace_rule_any: any[]) {
     }
     try {
       const evalNode = parseExpression(rule);
-      replace_rule.push({
+      replaceRule.push({
         pattern: patternToRegex(pattern),
         evalNode: evalNode,
       });
@@ -287,7 +289,7 @@ function convertRule(replace_rule_any: any[]) {
       throw new ConfigError('rule', error);
     }
   }
-  return replace_rule;
+  return replaceRule;
 }
 
 /**
@@ -309,105 +311,104 @@ function getConfiguration(uc: UserConfig, throwError: boolean, base?: Config): C
     ? uc.format.trim() as any
     : (base?.format ?? DEFAULT_IMAGE_FORMAT);
 
-  const exec_path: string = uc.execPath ? uc.execPath.trim() :
+  const execPath: string = uc.execPath ? uc.execPath.trim() :
     (base?.execPath ?? "");
-    console.log(exec_path);
+    console.log(execPath);
 
-  let base_directory: EvalNode;
+  let baseDirectory: EvalNode;
   if (uc.baseDirectory) {
     try {
-      base_directory = parseExpression(uc.baseDirectory);
+      baseDirectory = parseExpression(uc.baseDirectory);
     } catch (error) {
       if (throwError) {
-        throw new ConfigError("baseDirectory", error)
+        throw new ConfigError("baseDirectory", error);
       } else {
         if (base) {
-          base_directory = base.baseDirectory;
+          baseDirectory = base.baseDirectory;
         } else {
-          base_directory = DEFAULT_BASE_DIRECTORY_NODE;
+          baseDirectory = DEFAULT_BASE_DIRECTORY_NODE;
         }
       }
     }
   } else {
-    base_directory = base?.baseDirectory ?? DEFAULT_BASE_DIRECTORY_NODE;
+    baseDirectory = base?.baseDirectory ?? DEFAULT_BASE_DIRECTORY_NODE;
   }
 
-  let base_directories: Rule[];
+  let baseDirectories: Rule[];
   if (uc.baseDirectories) {
-    let d;
     if (!Array.isArray(uc.baseDirectories)) {
       if (throwError) {
         throw new ConfigError('baseDirectories', "baseDirectories is not array");
       } else {
-        base_directories = base?.baseDirectories ?? convertRule(DEFAULT_BASE_DIRECTORIES);
+        baseDirectories = base?.baseDirectories ?? convertRule(DEFAULT_BASE_DIRECTORIES);
       }
     } else {
       try {
-        base_directories = convertRule(uc.baseDirectories);
+        baseDirectories = convertRule(uc.baseDirectories);
       } catch (error) {
         if (throwError) {
           throw error;
         } else {
-          base_directories = base?.baseDirectories ?? convertRule(DEFAULT_BASE_DIRECTORIES);
+          baseDirectories = base?.baseDirectories ?? convertRule(DEFAULT_BASE_DIRECTORIES);
         }
       }
     }
   } else {
-    base_directories = base?.baseDirectories ?? convertRule(DEFAULT_BASE_DIRECTORIES);
+    baseDirectories = base?.baseDirectories ?? convertRule(DEFAULT_BASE_DIRECTORIES);
   }
 
-  let base_filename: EvalNode;
+  let baseFilename: EvalNode;
   if (uc.defaultFileName) {
     try {
-      base_filename = parseExpression(uc.defaultFileName);
+      baseFilename = parseExpression(uc.defaultFileName);
     } catch (error) {
       if (throwError) {
-        throw new ConfigError("defaultFileName", error)
+        throw new ConfigError("defaultFileName", error);
       } else {
-        base_filename = base?.defaultFileName ?? parseExpression(DEFAULT_BASE_FILENAME);
+        baseFilename = base?.defaultFileName ?? parseExpression(DEFAULT_BASE_FILENAME);
       }
     }
   } else {
-    base_filename = base?.defaultFileName ?? parseExpression(DEFAULT_BASE_FILENAME);
+    baseFilename = base?.defaultFileName ?? parseExpression(DEFAULT_BASE_FILENAME);
   }
 
-  let replace_rule: Rule[];
+  let replaceRule: Rule[];
   if (uc.rule) {
     if (!Array.isArray(uc.rule)) {
       if (throwError) {
         throw new ConfigError('rule', "replace rule is not array");
       } else {
-        replace_rule = base?.rule ?? convertRule(DEFAULT_REPLACE_RULE);
+        replaceRule = base?.rule ?? convertRule(DEFAULT_REPLACE_RULE);
       }
     } else {
       try {
-        replace_rule = convertRule(uc.rule);
+        replaceRule = convertRule(uc.rule);
       } catch (error) {
         if (throwError) {
           throw error;
         } else {
-          replace_rule = base?.rule ?? convertRule(DEFAULT_REPLACE_RULE);
+          replaceRule = base?.rule ?? convertRule(DEFAULT_REPLACE_RULE);
         }
       }
     }
   } else {
-    replace_rule = base?.rule ?? convertRule(DEFAULT_REPLACE_RULE);
+    replaceRule = base?.rule ?? convertRule(DEFAULT_REPLACE_RULE);
   }
 
-  const suffix_len = uc.suffixLength ?? (base?.suffixLength ?? DEFAULT_SUFFIXS_LENGTH);
-  const suffix_delimiter = uc.suffixDelimiter ?? (base?.suffixDelimiter ?? DEFAULT_SUFFIXS_DELIMITER);
-  const save_in_workspace = uc.saveInWorkspaceOnly ?? (base?.saveInWorkspaceOnly ?? true);
+  const suffixLen = uc.suffixLength ?? (base?.suffixLength ?? DEFAULT_SUFFIXS_LENGTH);
+  const suffixDelimiter = uc.suffixDelimiter ?? (base?.suffixDelimiter ?? DEFAULT_SUFFIXS_DELIMITER);
+  const saveInWorkspace = uc.saveInWorkspaceOnly ?? (base?.saveInWorkspaceOnly ?? true);
 
   return {
     format: format,
-    execPath: exec_path,
-    baseDirectory: base_directory,
-    baseDirectories: base_directories,
-    defaultFileName: base_filename,
-    rule: replace_rule,
-    suffixLength: suffix_len,
-    suffixDelimiter: suffix_delimiter,
-    saveInWorkspaceOnly: save_in_workspace,
+    execPath: execPath,
+    baseDirectory: baseDirectory,
+    baseDirectories: baseDirectories,
+    defaultFileName: baseFilename,
+    rule: replaceRule,
+    suffixLength: suffixLen,
+    suffixDelimiter: suffixDelimiter,
+    saveInWorkspaceOnly: saveInWorkspace,
   };
 }
 
@@ -437,42 +438,42 @@ async function loadUdonJsonConfig(uri: vscode.Uri): Promise<UserConfig | null> {
   }
   try {
     const f = await vscode.workspace.fs.readFile(uri);
-    const jsonString = Buffer.from(f).toString('utf8')
+    const jsonString = Buffer.from(f).toString('utf8');
     const json = JSON.parse(jsonString);
     // ---------- Getter  -------------------------------
-    type getter<T> = (name: string) => T | undefined;
-    function get<T>(name: ConfigName, f: getter<T>) {
+    type Getter<T> = (name: string) => T | undefined;
+    function get<T>(name: ConfigName, f: Getter<T>) {
       return f(name) ?? f("udon." + name);
     };
-    const get_type = <T>(name: ConfigName, typename: string) => {
+    const getType = <T>(name: ConfigName, typename: string) => {
       return get<T>(name, x => {
         return (typeof json[x] === typename) ? json[x] : undefined;
       });
-    }
-    const get_string = (name: ConfigName) => {
-      return get_type<string>(name, "string");
     };
-    const get_boolean = (name: ConfigName) => {
-      return get_type<boolean>(name, "boolean");
+    const getString = (name: ConfigName) => {
+      return getType<string>(name, "string");
     };
-    const get_number = (name: ConfigName) => {
-      return get_type<number>(name, "number");
+    const getBoolean = (name: ConfigName) => {
+      return getType<boolean>(name, "boolean");
     };
-    const get_any = (name: ConfigName) => {
+    const getNumber = (name: ConfigName) => {
+      return getType<number>(name, "number");
+    };
+    const getAny = (name: ConfigName) => {
       return get<any>(name, x => {
         return json[x];
       });
     };
     return assertFullUserConfig({
-      format: get_string('format'),
-      execPath: get_string('execPath'),
-      baseDirectory: get_string('baseDirectory'),
-      baseDirectories: get_any('baseDirectories'),
-      defaultFileName: get_string('defaultFileName'),
-      rule: get_any('rule'),
-      suffixLength: get_number('suffixLength'),
-      suffixDelimiter: get_string('suffixDelimiter'),
-      saveInWorkspaceOnly: get_boolean('saveInWorkspaceOnly'),
+      format: getString('format'),
+      execPath: getString('execPath'),
+      baseDirectory: getString('baseDirectory'),
+      baseDirectories: getAny('baseDirectories'),
+      defaultFileName: getString('defaultFileName'),
+      rule: getAny('rule'),
+      suffixLength: getNumber('suffixLength'),
+      suffixDelimiter: getString('suffixDelimiter'),
+      saveInWorkspaceOnly: getBoolean('saveInWorkspaceOnly'),
     });
   } catch (err) {
     console.log(`Json parse error:  ${uri.path}, ${err}`);
@@ -534,8 +535,8 @@ export class Udon implements Logger {
       this.config = getConfiguration(getUserConfiguration(), true);
     } catch (err) {
       this.config = getConfiguration(getUserConfiguration(), false);
-      this.log(`[ERROR] Config: ${err}`)
-      vscode.window.showErrorMessage(`Udon🍜 configuration error: ${err}`)
+      this.log(`[ERROR] Config: ${err}`);
+      vscode.window.showErrorMessage(`Udon🍜 configuration error: ${err}`);
     }
     this.channel = vscode.window.createOutputChannel("udon🍜");
     this.channel.appendLine(`Extension Path: ${ctx.extension.extensionPath}`);
@@ -545,8 +546,8 @@ export class Udon implements Logger {
           this.config = getConfiguration(getUserConfiguration(), true);
         } catch (err) {
           this.config = getConfiguration(getUserConfiguration(), false);
-          this.log(`[ERROR] Config: ${err}`)
-          vscode.window.showErrorMessage(`Udon🍜 configuration error: ${err}`)
+          this.log(`[ERROR] Config: ${err}`);
+          vscode.window.showErrorMessage(`Udon🍜 configuration error: ${err}`);
         }
       })
     );
@@ -563,15 +564,15 @@ export class Udon implements Logger {
   /**
    * default climg2base64 path
    */
-  get_default_bin_path() {
-    return defualt_climg2base64_path(this.context.extensionPath);
+  getDefaultBinPath() {
+    return defaultClimg2base64Path(this.context.extensionPath);
   }
 
   /**
    * default climg2base64 directory
    */
-  get_default_bin_dir() {
-    return defualt_climg2base64_dir(this.context.extensionPath);
+  getDefaultBinDir() {
+    return defaultClimg2base64Dir(this.context.extensionPath);
   }
 
   /**
@@ -589,36 +590,36 @@ export class Udon implements Logger {
         c = getConfiguration(c2, true, c);
       }
     } catch (err) {
-      vscode.window.showErrorMessage(`Udon🍜: udon.json error: ${err}`)
+      vscode.window.showErrorMessage(`Udon🍜: udon.json error: ${err}`);
       return;
     }
 
-    await pastaRamen(c, this.get_default_bin_path(), this);
+    await pastaRamen(c, this.getDefaultBinPath(), this);
   }
 
   /**
    * download pre-build climg2base64
    */
-  async download_pre_build(show_err_msg: boolean) {
-    const x = get_download_url();
+  async downloadPreBuild(showErrMsg: boolean) {
+    const x = getDownloadUrl();
     if (!x) {
       this.log("[ERROR] This OS and CPU are not supported. Please build yourself.");
       this.log("        cargo install --git https://github.com/nodamushi/climg2base64");
-      if (show_err_msg) {
-        vscode.window.showErrorMessage("This OS/CPU are not supported. Please build climg2base64 yourself.")
+      if (showErrMsg) {
+        vscode.window.showErrorMessage("This OS/CPU are not supported. Please build climg2base64 yourself.");
       }
       return false;
     } else {
-      const dir = this.get_default_bin_dir();
-      this.log(`[INFO] Download: ${x[0]} (${x[2]})`)
-      this.log(`[INFO] Save directory: ${dir}`)
+      const dir = this.getDefaultBinDir();
+      this.log(`[INFO] Download: ${x[0]} (${x[2]})`);
+      this.log(`[INFO] Save directory: ${dir}`);
       try {
         vscode.window.showInformationMessage("Download climg2base64 binary.");
         let y = await download(x, dir);
         return y !== null;
       } catch (err) {
         this.log(`[ERROR] Fail to download ${x[0]}: ${err}`);
-        if (show_err_msg) {
+        if (showErrMsg) {
           vscode.window.showErrorMessage(`Fail to download ${x[0]}`);
         }
         return false;
@@ -629,16 +630,16 @@ export class Udon implements Logger {
   /**
    * download pre-build climg2base64
    */
-  async auto_download_pre_build() {
+  async autoDownloadPreBuild() {
     if (!this.config.execPath) {
-      const p = this.get_default_bin_path();
+      const p = this.getDefaultBinPath();
       const downloaded = await exists(p);
       if (!downloaded) {
         this.log("[INFO] Auto download pre build climg2base64 binary.");
-        await this.download_pre_build(false);
+        await this.downloadPreBuild(false);
       } else {
         try {
-          const v = await getVersion(p)
+          const v = await getVersion(p);
           this.log("[INFO] climg2base64 version: " + v);
         } catch (err) {
           this.log(`[ERROR] Fail to get version: ${err}`);
@@ -779,14 +780,14 @@ function zeroFill(i: number, n: number): string {
  *
  * @interface SaveImageInfo
  * @property {Uri} path - The path where the image will be saved.
- * @property {number} [max_width] - The maximum width of the image (optional).
- * @property {number} [max_height] - The maximum height of the image (optional).
+ * @property {number} [maxWidth] - The maximum width of the image (optional).
+ * @property {number} [maxHeight] - The maximum height of the image (optional).
  * @property {FormatName} format - The format of the image (e.g., jpeg, png).
  */
 interface SaveImageInfo {
   path: Uri,
-  max_width?: number,
-  max_height?: number,
+  maxWidth?: number,
+  maxHeight?: number,
   format: FormatName,
 }
 const NEWLINE_TEXT = /[\r\n]/g;
@@ -797,15 +798,15 @@ const REMOVE_TEXT = /[[\r\n\t\\\]*?"<>|&%]/g;
  *
  * @interface ParseSelectResult
  * @property {string} [name] - The name of the image (optional). If provided, it may be used as the file name.
- * @property {number} [max_width] - The maximum width of the image (optional).
- * @property {number} [max_height] - The maximum height of the image (optional).
+ * @property {number} [maxWidth] - The maximum width of the image (optional).
+ * @property {number} [maxHeight] - The maximum height of the image (optional).
  * @property {FormatName} [format] - The format of the image (e.g., jpeg, png) (optional).
  * @property {boolean} [overwrite] - Indicates whether to overwrite an existing image when saving (optional).
  */
 interface ParseSelectResult {
   name?: string;
-  max_width?: number;
-  max_height?: number;
+  maxWidth?: number;
+  maxHeight?: number;
   format?: FormatName;
   overwrite?: boolean;
 };
@@ -825,10 +826,10 @@ function parseSelectText(text: string | null): ParseSelectResult {
     x = x.trim();
     if (x.startsWith("w=") || x.startsWith("w:")) {
       let y = x.substring(2).trim();
-      v.max_width = parseInt(y, 10);
+      v.maxWidth = parseInt(y, 10);
     } else if (x.startsWith("h=") || x.startsWith("h:")) {
       let y = x.substring(2).trim();
-      v.max_height = parseInt(y, 10);
+      v.maxHeight = parseInt(y, 10);
     } else if (FORMAT.includes(x as any)) {
       v.format = x as any;
     } else if (x === "jpg") {
@@ -849,7 +850,7 @@ function parseSelectText(text: string | null): ParseSelectResult {
       name = name.substring(0, name.length - ext.length);
     }
 
-    if (name.length == 0) {
+    if (name.length === 0) {
       delete v.name;
     } else {
       v.name = name;
@@ -860,7 +861,7 @@ function parseSelectText(text: string | null): ParseSelectResult {
 }
 
 /**
- * return save image path, and image max_width/height.
+ * return save image path, and image maxWidth/maxHeight.
  * @param config Config
  * @param env Eval env
  * @param selectedText Selected text on the editor
@@ -906,13 +907,13 @@ async function getSaveImagePath(
 
   return {
     path: path,
-    max_width: selected.max_width,
-    max_height: selected.max_height,
+    maxWidth: selected.maxWidth,
+    maxHeight: selected.maxHeight,
     format: format
   };
 }
 
-async function pastaRamen(config: Config, default_climg2base64: string, logger: Logger) {
+async function pastaRamen(config: Config, defaultClimg2base64: string, logger: Logger) {
   let editor = vscode.window.activeTextEditor;
   if (!editor) {
     logger.log("[ERROR] An active editor NOT found.");
@@ -921,7 +922,7 @@ async function pastaRamen(config: Config, default_climg2base64: string, logger: 
   }
 
   let { uri: editorUri, workspace } = getUriAndWorkspace(editor.document.uri);
-  if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length != 0) {
+  if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length !== 0) {
     workspace = vscode.workspace.workspaceFolders[0];
   }
 
@@ -934,12 +935,12 @@ async function pastaRamen(config: Config, default_climg2base64: string, logger: 
     editor: editorUri,
     workspace: workspaceUri,
     workspaces: vscode.workspace.workspaceFolders?.map((x) => {
-      return [x.name, x.uri]
+      return [x.name, x.uri];
     })
   };
 
   let info = await getSaveImagePath(config, env, selectText);
-  logger.log(`[INFO] Image save path: ${info.path}, ${info.format}, w:${info.max_width ?? 0}, h:${info.max_height ?? 0}`);
+  logger.log(`[INFO] Image save path: ${info.path}, ${info.format}, w:${info.maxWidth ?? 0}, h:${info.maxHeight ?? 0}`);
   if (config.saveInWorkspaceOnly) {
     const { workspace: w } = getUriAndWorkspace(info.path);
     if (!w) {
@@ -950,13 +951,13 @@ async function pastaRamen(config: Config, default_climg2base64: string, logger: 
   }
   let execpath = config.execPath;
   logger.log(`[INFO] exec path: ${execpath}`);
-  if (execpath.length == 0) {
-    if (!(await exists(default_climg2base64))) {
+  if (execpath.length === 0) {
+    if (!(await exists(defaultClimg2base64))) {
       logger.log(`[ERRRO] climg2base64 path is not configured`);
       vscode.window.showErrorMessage("climg2base64 path is not configured");
       return;
     }
-    execpath = default_climg2base64;
+    execpath = defaultClimg2base64;
   }
   if (!(await exists(execpath))) {
     logger.log(`[ERRRO] exec path: ${execpath} not found.`);
@@ -968,8 +969,8 @@ async function pastaRamen(config: Config, default_climg2base64: string, logger: 
   try {
     resultP = getClipboardAsImageBase64(execpath, info.format,
       {
-        width: info.max_width,
-        height: info.max_height
+        width: info.maxWidth,
+        height: info.maxHeight
       }
     );
   } catch (err) {
@@ -979,7 +980,7 @@ async function pastaRamen(config: Config, default_climg2base64: string, logger: 
   }
 
   env.image = info.path;
-  env.image_format = info.format;
+  env.imageFormat = info.format;
   const rule = getRule(config.rule, editorUri, DEFAULT_RULE);
   const text = evalString(rule, env);
 
@@ -1009,7 +1010,7 @@ async function pastaRamen(config: Config, default_climg2base64: string, logger: 
       vscode.window.showErrorMessage("Failed: " + error.message);
     } else {
       logger.log(`[ERROR] Fail to writeFle: ${env.image}`);
-      vscode.window.showErrorMessage("File save failed")
+      vscode.window.showErrorMessage("File save failed");
     }
     return;
   }
@@ -1040,7 +1041,7 @@ function sha256sum(path: string): Promise<string> {
   });
 }
 
-function get_download_url() {
+function getDownloadUrl() {
   let p = os.platform();
   let name: string = p;
   const a = os.arch();
@@ -1052,52 +1053,52 @@ function get_download_url() {
   }
 }
 
-function defualt_climg2base64_dir(extension_path: string) {
-  return path.join(extension_path, "bin");
+function defaultClimg2base64Dir(extensionPath: string) {
+  return path.join(extensionPath, "bin");
 }
 
-function defualt_climg2base64_path(extension_path: string) {
+function defaultClimg2base64Path(extensionPath: string) {
   if (isWin()) {
-    return path.join(extension_path, "bin", "climg2base64.exe");
+    return path.join(extensionPath, "bin", "climg2base64.exe");
   } else {
-    return path.join(extension_path, "bin", "climg2base64");
+    return path.join(extensionPath, "bin", "climg2base64");
   }
 }
 
 
-function download_url(url: string, save_path: string, maxRedirects: number = 5) {
+function downloadUrl(url: string, savePath: string, maxRedirects: number = 5) {
   return new Promise<string>((resolve, reject) => {
     https.get(url, (response) => {
       // Redirect check
       if (response.statusCode === 301 || response.statusCode === 302) {
         const location = response.headers.location;
-        if (maxRedirects == 0) {
+        if (maxRedirects === 0) {
           reject(new Error('Too many redirects'));
         } else if (location) {
-          download_url(location, save_path, maxRedirects - 1).then(resolve).catch(reject);
+          downloadUrl(location, savePath, maxRedirects - 1).then(resolve).catch(reject);
         } else {
           reject(new Error('Redirection location not provided'));
         }
         return;
       } else if (response.statusCode !== 200) {
-        fs.unlink(save_path, () => {
+        fs.unlink(savePath, () => {
           reject(new Error(`HTTP status code ${response.statusCode}`));
         });
         return;
       }
-      const file = fs.createWriteStream(save_path);
+      const file = fs.createWriteStream(savePath);
       file
         .on('finish', () => {
           file.close();
-          sha256sum(save_path).then(resolve).catch(reject);
+          sha256sum(savePath).then(resolve).catch(reject);
         })
         .on("error", (err) => {
           file.close();
-          fs.unlink(save_path, () => reject(err));
+          fs.unlink(savePath, () => reject(err));
         });
       response.pipe(file);
     }).on("error", (err) => {
-      fs.unlink(save_path, () => reject(err));
+      fs.unlink(savePath, () => reject(err));
     });
   });
 }
@@ -1117,7 +1118,7 @@ function deleteFile(path: string) {
       } else {
         resolve();
       }
-    })
+    });
   });
 }
 
@@ -1129,7 +1130,7 @@ function exists(path: string) {
       } else {
         resolve(true);
       }
-    })
+    });
   });
 }
 
@@ -1141,8 +1142,8 @@ function mkdir(dir: string) {
       } else {
         resolve();
       }
-    })
-  })
+    });
+  });
 }
 
 function getExtname(url: vscode.Uri) {
@@ -1155,26 +1156,26 @@ function getExtname(url: vscode.Uri) {
 
 /**
  * download climg2base64 binary from GitHub, and unpack (tar.gz).
- * - `url_contents`: PRE_BUILD[x]
- * - `save_dir`: output directory
+ * - `urlContents`: PRE_BUILD[x]
+ * - `saveDir`: output directory
  */
-async function download(url_contents: [string, string, string], save_dir: string) {
-  const [url, contents, sha256] = url_contents;
+async function download(urlContents: [string, string, string], saveDir: string) {
+  const [url, contents, sha256] = urlContents;
   let u = vscode.Uri.parse(url);
   const ext = getExtname(u);
-  const tmp_name = "tmp" + ext;
-  const tmp_path = path.join(save_dir, tmp_name);
-  if (!await exists(save_dir)) {
-    await mkdir(save_dir);
+  const tmpName = "tmp" + ext;
+  const tmpPath = path.join(saveDir, tmpName);
+  if (!await exists(saveDir)) {
+    await mkdir(saveDir);
   }
 
-  const download_sha256 = await download_url(url, tmp_path);
-  if (download_sha256 !== sha256) {
-    throw new Error(`${url} SHA256 Error: ${sha256} != ${download_sha256}`);
+  const downloadSha256 = await downloadUrl(url, tmpPath);
+  if (downloadSha256 !== sha256) {
+    throw new Error(`${url} SHA256 Error: ${sha256} != ${downloadSha256}`);
   }
-  await unpack(tmp_path, save_dir);
-  await deleteFile(tmp_path);
-  const output = path.join(save_dir, contents);
+  await unpack(tmpPath, saveDir);
+  await deleteFile(tmpPath);
+  const output = path.join(saveDir, contents);
   if (await exists(output)) {
     return output;
   } else {
@@ -1185,6 +1186,7 @@ async function download(url_contents: [string, string, string], save_dir: string
 //-------------------------------------------------------
 // Test: src/test/suite/udon.test.ts
 //-------------------------------------------------------
+/* eslint-disable @typescript-eslint/naming-convention -- Test-only export. TypeScript has no #[cfg(test)] equivalent, so internals are exposed via the __test__ pattern. */
 export const __test__ = {
   CONFIG_NAME,
   Udon,
@@ -1205,7 +1207,7 @@ export const __test__ = {
   getRule,
   parseSelectText,
   getSaveImagePath,
-  get_download_url,
+  getDownloadUrl,
   patternToRegex,
   download,
   testRulePattern,
@@ -1214,3 +1216,4 @@ export const __test__ = {
   loadUdonJsonConfig,
   loadUdonJsonConfigs
 };
+/* eslint-enable @typescript-eslint/naming-convention */

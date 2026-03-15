@@ -6,7 +6,7 @@ export interface Result {
   ok: boolean,
   base64: string,
   msg: string,
-  file_path: string,
+  filePath: string,
   format: string,
 }
 
@@ -20,11 +20,17 @@ function getErrorCodeMsg(error?: ExecFileException) {
       case 1: return "Invalid image format";
       case 2: return "Clipboard has no image";
       case 3: return "Fail to create image";
+      case 4: return "Fail to init clipboard";
       default: return "Clipboard error: " + error.code;
     }
   }
   return "";
 }
+
+// eslint-disable-next-line @typescript-eslint/naming-convention -- Test-only export. TypeScript has no #[cfg(test)] equivalent, so internals are exposed via the __test__ pattern.
+export const __test__ = {
+  getErrorCodeMsg,
+};
 
 export function getVersion(cmd: string) {
   let arg = [
@@ -35,13 +41,13 @@ export function getVersion(cmd: string) {
       reject(error);
     } else {
       const arr = stdout.split(" ");
-      if (arr.length != 2) {
-        reject(new Error("Unknown version format: " + stdout))
+      if (arr.length !== 2) {
+        reject(new Error("Unknown version format: " + stdout));
       } else {
         resolve(arr[1].trim());
       }
     }
-  }))
+  }));
 }
 
 /**
@@ -80,7 +86,7 @@ export function getClipboardAsImageBase64(
         ok: false,
         base64: "",
         msg: getErrorCodeMsg(error),
-        file_path: "",
+        filePath: "",
         format: format,
       });
     } else {
@@ -88,9 +94,9 @@ export function getClipboardAsImageBase64(
         ok: true,
         base64: stdout,
         msg: "OK",
-        file_path: stderr,
+        filePath: stderr,
         format: format,
       });
     }
-  }))
+  }));
 }

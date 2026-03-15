@@ -11,7 +11,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	});
 	context.subscriptions.push(disposable);
-	await udon.auto_download_pre_build();
+	await udon.autoDownloadPreBuild();
 }
 
 export function deactivate() {

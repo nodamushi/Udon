@@ -25,7 +25,7 @@ export interface EvalEnv {
   workspace?: vscode.Uri,
   workspaces?: [string, vscode.Uri][],
   image?: vscode.Uri,
-  image_format?: string,
+  imageFormat?: string,
 }
 
 // -------------------------------------------------------------------------------
@@ -86,7 +86,7 @@ type VariableName = (typeof VARIABLE_NAMES)[number];
 
 // error message
 const EDITOR_NOT_FOUND = "Editor file path is not detected";
-const IMAGE_NOT_FOUND = "Invalid image variable."
+const IMAGE_NOT_FOUND = "Invalid image variable.";
 const WORKSPACE_NOT_FOUND = "Workspace path is not detected";
 
 class VariableNode implements EvalNode {
@@ -112,14 +112,14 @@ class VariableNode implements EvalNode {
         if (env.editor) {
           return env.editor;
         } else {
-          throw Error(EDITOR_NOT_FOUND)
+          throw Error(EDITOR_NOT_FOUND);
         }
 
       case 'fileBasename':
         if (env.editor) {
           return basenameOfUri(env.editor);
         } else {
-          throw Error(EDITOR_NOT_FOUND)
+          throw Error(EDITOR_NOT_FOUND);
         }
 
       case 'fileBasenameNoExtension':
@@ -135,21 +135,21 @@ class VariableNode implements EvalNode {
         if (env.editor) {
           return parentOfUri(env.editor);
         } else {
-          throw Error(EDITOR_NOT_FOUND)
+          throw Error(EDITOR_NOT_FOUND);
         }
 
       case 'fileDirBasename': case 'fileDirnameBasename':
         if (env.editor) {
           return basenameOfUri(parentOfUri(env.editor));
         } else {
-          throw Error(EDITOR_NOT_FOUND)
+          throw Error(EDITOR_NOT_FOUND);
         }
 
       case 'fileExtname':
         if (env.editor) {
           return extnameOfUri(env.editor);
         } else {
-          throw Error(EDITOR_NOT_FOUND)
+          throw Error(EDITOR_NOT_FOUND);
         }
 
       case 'image':
@@ -197,7 +197,7 @@ class VariableNode implements EvalNode {
         }
 
       case 'imageFormat':
-        return env.image_format ?? "";
+        return env.imageFormat ?? "";
 
       case 'workspaceFolder':
         if (env.workspace) {
@@ -245,7 +245,7 @@ class VariableNode implements EvalNode {
         return false;
 
       case 'imageFormat':
-        return !!env.image_format;
+        return !!env.imageFormat;
 
       case 'workspaceFolder':
       case 'workspaceFolderBasename':
@@ -272,10 +272,10 @@ class EmptyNode implements EvalNode {
     return "";
   }
   evalString(env: EvalEnv): string {
-    return ""
+    return "";
   }
   equals(x: EvalNode): boolean {
-    return x == this || x instanceof EmptyNode;
+    return x === this || x instanceof EmptyNode;
   }
   debug(): string {
     return "[Empty]";
@@ -300,15 +300,15 @@ class NodeList implements EvalNode {
   }
 
   debug(): string {
-    let t = this.nodes.map((x) => { return x.debug() }).join(", ");
+    let t = this.nodes.map((x) => { return x.debug(); }).join(", ");
     return "[List: " + t + "]";
   }
 
   simplify() {
     const n = this.nodes;
-    if (n.length == 0) {
+    if (n.length === 0) {
       return new EmptyNode();
-    } else if (n.length == 1) {
+    } else if (n.length === 1) {
       return n[0];
     } else {
       return this;
@@ -332,9 +332,9 @@ class NodeList implements EvalNode {
     let x = this.nodes.map((x) => {
       return x.evalPath(env);
     });
-    if (x.length == 0) {
+    if (x.length === 0) {
       return "";
-    } else if (x.length == 1) {
+    } else if (x.length === 1) {
       return x[0];
     } else if (typeof x[0] === "string") {
       return x.map(asPath).join("");
@@ -361,13 +361,13 @@ class NodeList implements EvalNode {
   }
 
   equals(x: EvalNode): boolean {
-    if (x == this) {
+    if (x === this) {
       return true;
     }
     if (x instanceof NodeList) {
       const a = this.nodes;
       const b = x.nodes;
-      if (a.length != b.length) {
+      if (a.length !== b.length) {
         return false;
       }
       for (let i = 0; i < a.length; i++) {
@@ -382,7 +382,7 @@ class NodeList implements EvalNode {
 }
 
 class TextNode implements EvalNode {
-  text: string
+  text: string;
   constructor(x: string) {
     this.text = x;
   }
@@ -400,7 +400,7 @@ class TextNode implements EvalNode {
   }
 
   equals(x: EvalNode): boolean {
-    if (x == this) {
+    if (x === this) {
       return true;
     }
     if (x instanceof TextNode) {
@@ -423,7 +423,7 @@ class WorkspaceNode implements EvalNode {
     }
   }
   equals(x: EvalNode): boolean {
-    if (x == this) return true;
+    if (x === this) { return true; }
     if (x instanceof WorkspaceNode) {
       return this.name === x.name;
     }
@@ -441,7 +441,7 @@ class WorkspaceNode implements EvalNode {
 
     if (env.workspaces) {
       for (const w of env.workspaces) {
-        if (w[0] === this.name) return true;
+        if (w[0] === this.name) { return true; }
       }
     }
     return false;
@@ -486,7 +486,7 @@ class WorkspaceNode implements EvalNode {
  * ${date: YYYY-MM-DD}
  */
 class DateNode implements EvalNode {
-  pattern: string
+  pattern: string;
   constructor(x: string) {
     this.pattern = x.trim();
   }
@@ -520,7 +520,7 @@ class DateNode implements EvalNode {
     const hour24 = date.getHours();
     const hour = hour24.toString();
     const hour12 = (hour24 - (hour24 < 12 ? 0 : 12)).toString();
-    const am_pm = hour24 < 12 ? "AM" : "PM";
+    const amPm = hour24 < 12 ? "AM" : "PM";
 
     const min = date.getMinutes().toString();
     const sec = date.getSeconds().toString();
@@ -540,8 +540,8 @@ class DateNode implements EvalNode {
       // hour HH, H, hh, h
       .replace("HH", `0${hour}`.slice(-2))
       .replace("H", hour)
-      .replace("hh", am_pm + `0${hour12}`.slice(-2))
-      .replace("h", `${am_pm}${hour12}`)
+      .replace("hh", amPm + `0${hour12}`.slice(-2))
+      .replace("h", `${amPm}${hour12}`)
       // min mm, m
       .replace("mm", `0${min}`.slice(-2))
       .replace("m", min)
@@ -627,7 +627,7 @@ class RelativeNode implements EvalNode {
   }
 
   equals(x: EvalNode): boolean {
-    if (x == this) {
+    if (x === this) {
       return true;
     }
     if (x instanceof RelativeNode) {
@@ -782,7 +782,7 @@ class TextReader {
    */
   next() {
     const idx = this.cursor;
-    if (this.length == idx) {
+    if (this.length === idx) {
       return undefined;
     } else {
       return this.text.codePointAt(idx);
@@ -800,14 +800,14 @@ class TextReader {
   }
 
   hasNext() {
-    return this.cursor != this.length;
+    return this.cursor !== this.length;
   }
 }
 
-const CODEa = 'a'.charCodeAt(0); // a
-const CODEz = 'z'.charCodeAt(0); // z
-const CODEA = 'A'.charCodeAt(0); // A
-const CODEZ = 'Z'.charCodeAt(0); // Z
+const CODEA = 'a'.charCodeAt(0); // a
+const CODEZ = 'z'.charCodeAt(0); // z
+const CODE_A = 'A'.charCodeAt(0); // A
+const CODE_Z = 'Z'.charCodeAt(0); // Z
 const CODE0 = '0'.charCodeAt(0); // 0
 const CODE9 = '9'.charCodeAt(0); // 9
 
@@ -818,25 +818,25 @@ const CODE_COL = ':'.charCodeAt(0);   // :
 const CODE_SP = ' '.charCodeAt(0);    // space
 
 function isVariableChar(code: number): boolean {
-  return (CODEa <= code && code <= CODEz) ||
-    (CODEA <= code && code <= CODEZ) ||
+  return (CODEA <= code && code <= CODEZ) ||
+    (CODE_A <= code && code <= CODE_Z) ||
     (CODE0 <= code && code <= CODE9);
 }
 
 /**
  * @param r reader
  * @param parent node list
- * @param exit_LB true: exit when "}" found.
- * @return true: OK, false: NG (exit_LB == true && "}" not found)
+ * @param exitLb true: exit when "}" found.
+ * @return true: OK, false: NG (exitLb == true && "}" not found)
  */
-function parse(r: TextReader, parent: NodeList, exit_LB: boolean) {
+function parse(r: TextReader, parent: NodeList, exitLb: boolean) {
   while (r.hasNext()) {
     const c = r.next();
-    if (exit_LB && c === CODE_LB) { // }
+    if (exitLb && c === CODE_LB) { // }
 
       if (r.hasValue()) {
         const text = r.get().trimEnd();
-        if (text.length != 0) {
+        if (text.length !== 0) {
           parent.append(new TextNode(text));
         }
       }
@@ -852,11 +852,11 @@ function parse(r: TextReader, parent: NodeList, exit_LB: boolean) {
 
       if (!pre) { // $EOF
         parent.append(new TextNode("$"));
-      } if (pre == CODE_DOLL) {
+      } if (pre === CODE_DOLL) {
         r.skip();
         r.mark();
         parent.append(new TextNode("$"));
-      } else if (pre == CODE_RB) { // ${
+      } else if (pre === CODE_RB) { // ${
         r.skip();
         parseVarieble(r, parent);
         r.mark();
@@ -881,7 +881,7 @@ function parse(r: TextReader, parent: NodeList, exit_LB: boolean) {
   if (r.hasValue()) {
     parent.append(new TextNode(r.get()));
   }
-  return exit_LB ? false : true;
+  return exitLb ? false : true;
 }
 
 // parse ${varname: arg}
@@ -906,7 +906,7 @@ function parseVarieble(r: TextReader, parent: NodeList) {
       r.mark();
       ok = parse(r, arg, true);
       break;
-    } else if (c == CODE_LB) { // }
+    } else if (c === CODE_LB) { // }
       name = r.get().trim();
       r.skip();
       r.mark();
@@ -920,7 +920,7 @@ function parseVarieble(r: TextReader, parent: NodeList) {
   if (!ok) {
     throw new Error(`Invalid format, not closed: ${r.text}`);
   }
-  if (!name || name.length == 0) {
+  if (!name || name.length === 0) {
     throw new Error(`Invalid format, variable name is empry: ${r.text}`);
   }
   createVariable(name, arg, parent, r.text);
@@ -930,6 +930,7 @@ function parseVarieble(r: TextReader, parent: NodeList) {
 //-------------------------------------------------------
 // Test: src/test/suite/eval.test.ts
 //-------------------------------------------------------
+/* eslint-disable @typescript-eslint/naming-convention -- Test-only export. TypeScript has no #[cfg(test)] equivalent, so internals are exposed via the __test__ pattern. */
 export const __test__ = {
   NodeList,
   TextNode,
@@ -940,3 +941,4 @@ export const __test__ = {
   evalPath,
   evalString,
 };
+/* eslint-enable @typescript-eslint/naming-convention */
