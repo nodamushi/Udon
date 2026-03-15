@@ -31,8 +31,8 @@ suite('exp Test Suite', function () {
     rmSync(tmpdir.name, { force: true, recursive: true });
   });
 
-  const disabled_download_test = process.env.DISABLE_DOWNLOAD_TEST || "0";
-  if (disabled_download_test != "1") {
+  const disabledDownloadTest = process.env.DISABLE_DOWNLOAD_TEST || "0";
+  if (disabledDownloadTest !== "1") {
     test('download test', async function () {
       this.timeout(20000);
       for (const x in t.PRE_BUILD) {
@@ -42,6 +42,71 @@ suite('exp Test Suite', function () {
       }
     });
   }
+
+  // ------------------------------------------------------------------
+  // PRE_BUILD tests
+  // ------------------------------------------------------------------
+  const EXPECTED_KEYS = [
+    "linux-x64",
+    "linux-arm64",
+    "win32-x64",
+    "win32-arm64",
+    "darwin-arm64",
+  ];
+  const UNEXPECTED_KEYS = [
+    "darwin-x64",
+    "win32-ia32",
+    "linux-ia32",
+  ];
+
+  test("PRE_BUILD: unsupported platform keys must not exist", () => {
+    for (const key of UNEXPECTED_KEYS) {
+      assert.ok(!(key in t.PRE_BUILD), `PRE_BUILD must not contain key: ${key}`);
+    }
+  });
+
+  test("PRE_BUILD: every entry is a 3-element array [url, binaryName, sha256]", () => {
+    for (const key in t.PRE_BUILD) {
+      const entry = t.PRE_BUILD[key];
+      assert.strictEqual(entry.length, 3, `${key}: entry is not a 3-element array`);
+    }
+  });
+
+  test("PRE_BUILD: every entry URL has correct format", () => {
+    const prefix = "https://github.com/nodamushi/climg2base64/releases/download/";
+    for (const key in t.PRE_BUILD) {
+      const [url] = t.PRE_BUILD[key];
+      assert.ok(url.startsWith(prefix), `${key}: URL does not start with ${prefix}: ${url}`);
+      assert.ok(url.endsWith(".tar.gz"), `${key}: URL does not end with .tar.gz: ${url}`);
+    }
+  });
+
+  test("PRE_BUILD: every entry SHA256 has correct format", () => {
+    const sha256re = /^[0-9a-f]{64}$/;
+    for (const key in t.PRE_BUILD) {
+      const [, , sha256] = t.PRE_BUILD[key];
+      assert.ok(sha256re.test(sha256), `${key}: invalid SHA256: "${sha256}"`);
+    }
+  });
+
+  test("PRE_BUILD: binary name matches the OS", () => {
+    for (const key in t.PRE_BUILD) {
+      const [, binaryName] = t.PRE_BUILD[key];
+      if (key.startsWith("win32-")) {
+        assert.strictEqual(binaryName, "climg2base64.exe", `${key}: binary name is not climg2base64.exe`);
+      } else {
+        assert.strictEqual(binaryName, "climg2base64", `${key}: binary name is not climg2base64`);
+      }
+    }
+  });
+
+  test("PRE_BUILD: all expected keys exist", () => {
+    for (const key of EXPECTED_KEYS) {
+      assert.ok(key in t.PRE_BUILD, `PRE_BUILD is missing key: ${key}`);
+    }
+  });
+
+  // ------------------------------------------------------------------
 
   test("Invalid Pattern", () => {
     assert.throws(() => t.patternToRegex("***"));
@@ -279,8 +344,8 @@ suite('exp Test Suite', function () {
       assert.deepStrictEqual(x, {});
     }
     {
-      let x = t.parseSelectText("w:100,h:200")
-      assert.deepStrictEqual(x, { max_width: 100, max_height: 200 });
+      let x = t.parseSelectText("w:100,h:200");
+      assert.deepStrictEqual(x, { maxWidth: 100, maxHeight: 200 });
     }
     {
       let x = t.parseSelectText("?");
@@ -296,7 +361,7 @@ suite('exp Test Suite', function () {
     }
     {
       let x = t.parseSelectText("w:500, ?_foobar.png  , h=100");
-      assert.deepStrictEqual(x, { overwrite: true, name: "_foobar", format: "png", max_width: 500, max_height: 100 });
+      assert.deepStrictEqual(x, { overwrite: true, name: "_foobar", format: "png", maxWidth: 500, maxHeight: 100 });
     }
   });
 
@@ -454,8 +519,8 @@ suite('exp Test Suite', function () {
     }, "w:200", async () => false);
     assert.strictEqual(x.format, "webp");
     assert.strictEqual(x.path.path, "/foo/bar/20241124121634.webp");
-    assert.strictEqual(x.max_height, undefined);
-    assert.strictEqual(x.max_width, 200);
+    assert.strictEqual(x.maxHeight, undefined);
+    assert.strictEqual(x.maxWidth, 200);
   });
 
   test("getSaveImagePath_seq", async () => {
@@ -473,7 +538,7 @@ suite('exp Test Suite', function () {
       date: getDate(2024, 11, 24, 12, 16, 34),
     }, "h:200", async (path: vscode.Uri) => {
       let x = path.path.split("-");
-      if (x.length == 2) {
+      if (x.length === 2) {
         let y = parseInt(x[1]);
         return y < 11;
       } else {
@@ -482,8 +547,8 @@ suite('exp Test Suite', function () {
     });
     assert.strictEqual(x.format, "jpeg");
     assert.strictEqual(x.path.path, "/foo/bar/20241124121634-011.jpg");
-    assert.strictEqual(x.max_height, 200);
-    assert.strictEqual(x.max_width, undefined);
+    assert.strictEqual(x.maxHeight, 200);
+    assert.strictEqual(x.maxWidth, undefined);
   });
   test("getSaveImagePath_override", async () => {
     let x = await t.getSaveImagePath({
@@ -501,7 +566,7 @@ suite('exp Test Suite', function () {
       editor: vscode.Uri.file("/foo/bar.txt")
     }, "h:200,?foobar", async (path: vscode.Uri) => {
       let x = path.path.split("-");
-      if (x.length == 2) {
+      if (x.length === 2) {
         let y = parseInt(x[1]);
         return y < 11;
       } else {
@@ -510,8 +575,8 @@ suite('exp Test Suite', function () {
     });
     assert.strictEqual(x.format, "png");
     assert.strictEqual(x.path.path, "/foo/bar/foobar.png");
-    assert.strictEqual(x.max_height, 200);
-    assert.strictEqual(x.max_width, undefined);
+    assert.strictEqual(x.maxHeight, 200);
+    assert.strictEqual(x.maxWidth, undefined);
   });
 
   test("getSaveImagePath_not_override", async () => {
@@ -529,7 +594,7 @@ suite('exp Test Suite', function () {
       date: getDate(2024, 11, 24, 12, 16, 34),
     }, "h:200,?", async (path: vscode.Uri) => {
       let x = path.path.split("-");
-      if (x.length == 2) {
+      if (x.length === 2) {
         let y = parseInt(x[1]);
         return y < 11;
       } else {
@@ -538,8 +603,8 @@ suite('exp Test Suite', function () {
     });
     assert.strictEqual(x.format, "png");
     assert.strictEqual(x.path.path, "/foo/bar/20241124121634-11.png");
-    assert.strictEqual(x.max_height, 200);
-    assert.strictEqual(x.max_width, undefined);
+    assert.strictEqual(x.maxHeight, 200);
+    assert.strictEqual(x.maxWidth, undefined);
   });
 
 
@@ -600,19 +665,19 @@ suite('exp Test Suite', function () {
   });
 
   test("loadUdonJsonConfig no file", async () => {
-    const json_path = path.join(tmpdir.name, "udon.udon.udon.udon");
-    let x = await t.loadUdonJsonConfig(vscode.Uri.file(json_path));
+    const jsonPath = path.join(tmpdir.name, "udon.udon.udon.udon");
+    let x = await t.loadUdonJsonConfig(vscode.Uri.file(jsonPath));
     assert.strictEqual(x, null);
   });
 
   test("loadUdonJsonConfig", async () => {
-    const json_data = `{
+    const jsonData = `{
     "udon.format": "png",
     "saveInWorkspaceOnly": true
   }`;
-    const json_path = path.join(tmpdir.name, "udon.json");
-    await fs.writeFile(json_path, json_data);
-    let x = await t.loadUdonJsonConfig(vscode.Uri.file(json_path));
+    const jsonPath = path.join(tmpdir.name, "udon.json");
+    await fs.writeFile(jsonPath, jsonData);
+    let x = await t.loadUdonJsonConfig(vscode.Uri.file(jsonPath));
     assert.notStrictEqual(x, null);
     let y = x as any;
     assert.equal(y.format, "png");
@@ -624,25 +689,183 @@ suite('exp Test Suite', function () {
     }
   });
 
+  // ------------------------------------------------------------------
+  // getConfiguration - invalid format value
+  // ------------------------------------------------------------------
+  test("getConfiguration: invalid format value falls back to default", () => {
+    const invalids = ["tiff", "JPEG", "PNG", "WEBP", " ", "invalid", "svg"];
+    for (const fmt of invalids) {
+      const c = t.getConfiguration({ format: fmt }, true);
+      assert.equal(c.format, t.DEFAULT_IMAGE_FORMAT, `format "${fmt}" should fall back to default`);
+    }
+  });
+
+  test("getConfiguration: suffixLength uses default when not set", () => {
+    const c = t.getConfiguration({}, true);
+    assert.equal(c.suffixLength, t.DEFAULT_SUFFIXS_LENGTH);
+    assert.equal(c.suffixDelimiter, t.DEFAULT_SUFFIXS_DELIMITER);
+  });
+
+  // ------------------------------------------------------------------
+  // patternToRegex - invalid characters
+  // ------------------------------------------------------------------
+  test("patternToRegex: pattern with invalid characters throws", () => {
+    const invalids = ["?.txt", "foo!bar", "@hello", "#tag", "foo|bar"];
+    for (const p of invalids) {
+      assert.throws(() => t.patternToRegex(p), Error, `pattern "${p}" should throw`);
+    }
+  });
+
+  test("patternToRegex: pattern with spaces is valid", () => {
+    const r = t.patternToRegex("foo bar.txt");
+    assert.ok(r.test("foo bar.txt"), "foo bar.txt");
+    assert.ok(!r.test("foobar.txt"), "foobar.txt should not match");
+  });
+
+  // ------------------------------------------------------------------
+  // parseSelectText - additional formats
+  // ------------------------------------------------------------------
+  test("parseSelectText: .webp/.gif/.bmp/.avif extensions and jpg keyword", () => {
+    {
+      const x = t.parseSelectText("foo.webp");
+      assert.deepStrictEqual(x, { name: "foo", format: "webp" });
+    }
+    {
+      const x = t.parseSelectText("foo.gif");
+      assert.deepStrictEqual(x, { name: "foo", format: "gif" });
+    }
+    {
+      const x = t.parseSelectText("foo.bmp");
+      assert.deepStrictEqual(x, { name: "foo", format: "bmp" });
+    }
+    {
+      const x = t.parseSelectText("foo.avif");
+      assert.deepStrictEqual(x, { name: "foo", format: "avif" });
+    }
+    {
+      // .jpg extension maps to "jpeg" via EXT_FORMAT[".jpg"]
+      const x = t.parseSelectText("foo.jpg");
+      assert.deepStrictEqual(x, { name: "foo", format: "jpeg" });
+    }
+    {
+      // "png" alone is treated as a FORMAT keyword
+      const x = t.parseSelectText("png");
+      assert.deepStrictEqual(x, { format: "png" });
+    }
+    {
+      // "jpg" keyword maps to "jpeg"
+      const x = t.parseSelectText("jpg");
+      assert.deepStrictEqual(x, { format: "jpeg" });
+    }
+  });
+
+  // ------------------------------------------------------------------
+  // getSaveImagePath - format override
+  // ------------------------------------------------------------------
+  test("getSaveImagePath_format_override", async () => {
+    let x = await t.getSaveImagePath({
+      format: "png",
+      execPath: "",
+      baseDirectory: et.parseExpression("/foo/bar"),
+      baseDirectories: [],
+      defaultFileName: et.parseExpression("image"),
+      rule: [],
+      suffixLength: 2,
+      suffixDelimiter: "_",
+      saveInWorkspaceOnly: true
+    }, {
+      date: getDate(2024, 11, 24, 12, 16, 34),
+    }, "webp", async () => false);
+    // selected text "webp" overrides format to webp
+    assert.strictEqual(x.format, "webp");
+    assert.strictEqual(x.path.path, "/foo/bar/image.webp");
+  });
+
+  // ------------------------------------------------------------------
+  // getSaveImagePath - suffixLength:0 conflict case
+  // ------------------------------------------------------------------
+  test("getSaveImagePath_suffixLength_0_with_conflict", async () => {
+    // suffixLength=0: suffix has no zero-padding ("1", "2", ...)
+    let x = await t.getSaveImagePath({
+      format: "png",
+      execPath: "",
+      baseDirectory: et.parseExpression("/foo/bar"),
+      baseDirectories: [],
+      defaultFileName: et.parseExpression("image"),
+      rule: [],
+      suffixLength: 0,
+      suffixDelimiter: "_",
+      saveInWorkspaceOnly: true
+    }, {
+      date: getDate(2024, 11, 24, 12, 16, 34),
+    }, null, async (path: vscode.Uri) => {
+      // image.png and image_1.png already exist
+      return path.path === "/foo/bar/image.png" || path.path === "/foo/bar/image_1.png";
+    });
+    assert.strictEqual(x.path.path, "/foo/bar/image_2.png");
+  });
+
+  // ------------------------------------------------------------------
+  // getRule
+  // ------------------------------------------------------------------
+  test("getRule: returns the matching rule", () => {
+    const rules = [
+      createRule("*.md", "markdown"),
+      createRule("*.txt", "text"),
+    ];
+    const defaultNode = et.parseExpression("default");
+
+    const r1 = t.getRule(rules, vscode.Uri.file("/foo/bar.md"), defaultNode);
+    assert.deepStrictEqual(r1, et.parseExpression("markdown"));
+
+    const r2 = t.getRule(rules, vscode.Uri.file("/foo/bar.txt"), defaultNode);
+    assert.deepStrictEqual(r2, et.parseExpression("text"));
+  });
+
+  test("getRule: returns default value when no rule matches", () => {
+    const rules = [
+      createRule("*.md", "markdown"),
+    ];
+    const defaultNode = et.parseExpression("default");
+
+    const r1 = t.getRule(rules, vscode.Uri.file("/foo/bar.ts"), defaultNode);
+    assert.deepStrictEqual(r1, defaultNode);
+
+    const r2 = t.getRule([], vscode.Uri.file("/foo/bar.md"), defaultNode);
+    assert.deepStrictEqual(r2, defaultNode);
+  });
+
+  // ------------------------------------------------------------------
+  // loadUdonJsonConfig - invalid JSON
+  // ------------------------------------------------------------------
+  test("loadUdonJsonConfig: throws on invalid JSON", async () => {
+    const jsonPath = path.join(tmpdir.name, "invalid.json");
+    await fs.writeFile(jsonPath, "{ this is not valid json }");
+    await assert.rejects(
+      () => t.loadUdonJsonConfig(vscode.Uri.file(jsonPath)),
+      /JSON Parse error/
+    );
+  });
+
   test("loadUdonJsonConfigs", async () => {
-    const json_data1 = `{
+    const jsonData1 = `{
       "udon.format": "png",
       "saveInWorkspaceOnly": true
     }`;
-    const json_data2 = `{
+    const jsonData2 = `{
       "format": "jpg",
       "udon.rule": [
         ["a", "b"],
         ["c", "d"]
       ]
     }`;
-    const json_path1 = path.join(tmpdir.name, "udon1.json");
-    const json_path2 = path.join(tmpdir.name, "udon2.json");
-    await fs.writeFile(json_path1, json_data1);
-    await fs.writeFile(json_path2, json_data2);
+    const jsonPath1 = path.join(tmpdir.name, "udon1.json");
+    const jsonPath2 = path.join(tmpdir.name, "udon2.json");
+    await fs.writeFile(jsonPath1, jsonData1);
+    await fs.writeFile(jsonPath2, jsonData2);
     let x = await t.loadUdonJsonConfigs([
-      vscode.Uri.file(json_path1),
-      vscode.Uri.file(json_path2)
+      vscode.Uri.file(jsonPath1),
+      vscode.Uri.file(jsonPath2)
     ]);
     assert.notStrictEqual(x, null, "load failed");
     let y = x as any;

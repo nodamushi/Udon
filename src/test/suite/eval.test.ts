@@ -269,7 +269,7 @@ suite('exp Test Suite', () => {
       workspace: vscode.Uri.file("/foo/bar/workspace"),
       editor: vscode.Uri.file("/foo/bar/workspace/src/hoge/text.txt"),
       image: vscode.Uri.file("/foo/bar/workspace/img/hoge/fuga.webp"),
-      image_format: "jpeg",
+      imageFormat: "jpeg",
     };
     let p = "${workspaceFolder}";
     let e = t.parseExpression(p);
@@ -362,7 +362,48 @@ suite('exp Test Suite', () => {
     assert.equal(e.isSupportPath(env), true);
     assert.equal(t.evalString(e, env), "jpeg", p);
 
-  })
+  });
+
+  // ------------------------------------------------------------------
+  // undefined variable cases
+  // ------------------------------------------------------------------
+  test('evalString: file variables throw when editor is undefined', () => {
+    const env = { date: new Date() }; // no editor
+    const fileVars = [
+      "${file}", "${fileBasename}", "${fileExtname}",
+      "${fileBasenameNoExtension}", "${fileDirname}", "${fileDir}",
+      "${fileDirnameBasename}", "${fileDirBasename}",
+    ];
+    for (const p of fileVars) {
+      const e = t.parseExpression(p);
+      assert.equal(e.isSupportPath(env), false, `${p} isSupportPath should be false`);
+      assert.throws(() => t.evalString(e, env), Error, `${p} should throw`);
+    }
+  });
+
+  test('evalString: workspaceFolder variables throw when workspace is undefined', () => {
+    const env = { date: new Date() }; // no workspace
+    const wsVars = ["${workspaceFolder}", "${workspaceFolderBasename}"];
+    for (const p of wsVars) {
+      const e = t.parseExpression(p);
+      assert.equal(e.isSupportPath(env), false, `${p} isSupportPath should be false`);
+      assert.throws(() => t.evalString(e, env), Error, `${p} should throw`);
+    }
+  });
+
+  test('evalString: image variables throw when image is undefined', () => {
+    const env = { date: new Date() }; // no image
+    const imageVars = [
+      "${image}", "${imageBasename}", "${imageExtname}",
+      "${imageBasenameNoExtension}", "${imageDirname}", "${imageDir}",
+      "${imageDirnameBasename}", "${imageDirBasename}",
+    ];
+    for (const p of imageVars) {
+      const e = t.parseExpression(p);
+      assert.equal(e.isSupportPath(env), false, `${p} isSupportPath should be false`);
+      assert.throws(() => t.evalString(e, env), Error, `${p} should throw`);
+    }
+  });
 
   test('evalString [$imageBasename, $imageFormat](${relImage: ${workspaceFolder}})', () => {
     let e = t.parseExpression("[$imageBasename, $imageFormat](${relImage: ${workspaceFolder}})");
@@ -371,14 +412,14 @@ suite('exp Test Suite', () => {
       workspace: vscode.Uri.file("/foo/bar/workspace"),
       editor: vscode.Uri.file("/foo/bar/workspace/src/hoge/text.txt"),
       image: vscode.Uri.file("/foo/bar/workspace/img/hoge/fuga.webp"),
-      image_format: "webp",
+      imageFormat: "webp",
     };
     let text = t.evalString(e, env);
     assert.equal(e.isSupportPath(env), false);
     assert.equal(text, "[fuga.webp, webp](img/hoge/fuga.webp)");
 
     env.image = vscode.Uri.file("/foo/img/piyo/taro.jpg");
-    env.image_format = "jpeg";
+    env.imageFormat = "jpeg";
     text = t.evalString(e, env);
     assert.equal(e.isSupportPath(env), false);
     assert.equal(text, "[taro.jpg, jpeg](../../img/piyo/taro.jpg)");
